@@ -5,14 +5,14 @@
     <link>https://github.com/williamcachamwri/Flemo/releases</link>
     <description>Debug appcast for Flemo.</description>
     <item>
-      <title>Flemo Debug 1.1.1</title>
-      <sparkle:version>3</sparkle:version>
-      <sparkle:shortVersionString>1.1.1</sparkle:shortVersionString>
-      <pubDate>Thu, 09 Jul 2026 15:05:23 +0000</pubDate>
+      <title>Flemo Debug 1.1.2</title>
+      <sparkle:version>4</sparkle:version>
+      <sparkle:shortVersionString>1.1.2</sparkle:shortVersionString>
+      <pubDate>Thu, 09 Jul 2026 15:15:53 +0000</pubDate>
       <enclosure
-        url="https://github.com/williamcachamwri/Flemo/releases/download/v1.1.1/Flemo-Debug-v1.1.1.zip"
-        sparkle:edSignature="96h3EXNsVZGzbSNPttPJQ1fdh1tpeimYsT7rjBRGumdEndbajTGiEvi8dPJKjZ9UVqrdJ+t5gdHlL1biG0dlAg=="
-        length="3708280"
+        url="https://github.com/williamcachamwri/Flemo/releases/download/v1.1.2/Flemo-Debug-v1.1.2.zip"
+        sparkle:edSignature="DMMa2M/WNRcgY+/b1KW6DfgI2BP1tURF+e4BNALseEwmLT7wL3ZhFraiXmFNBu6s+3FsbZN/tQRkx1wDid+gDw=="
+        length="3709905"
         type="application/octet-stream" />
     </item>
   </channel>
