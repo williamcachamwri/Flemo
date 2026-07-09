@@ -22,7 +22,7 @@ private enum SettingsPane: String, CaseIterable, Identifiable {
         case .general: "API, permissions, data"
         case .trigger: "Inline search behavior"
         case .shortcuts: "Boards and quick select"
-        case .features: "Emoji, GIF, selection"
+        case .features: "Emoji and selection"
         }
     }
 
@@ -156,40 +156,8 @@ private struct SidebarButton: View {
 }
 
 private struct GeneralSettingsPane: View {
-    @State private var gifInsertionMode: GIFInsertionMode = AppSettings.shared.gifInsertionMode
-    @State private var giphyAPIKey: String = AppSettings.shared.giphyAPIKey
-
     var body: some View {
         VStack(spacing: 14) {
-            SettingsSection(title: "GIPHY", subtitle: "GIF search and insertion", systemImage: "photo.stack") {
-                SettingsRow(icon: "key.fill", title: "API key", subtitle: "Required only when GIF search is enabled.") {
-                    HStack(spacing: 8) {
-                        SecureField("GIPHY API key", text: $giphyAPIKey)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 230)
-                        Button {
-                            AppSettings.shared.giphyAPIKey = giphyAPIKey
-                        } label: {
-                            Label("Save", systemImage: "checkmark")
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-                }
-
-                SettingsRow(icon: "link", title: "GIF insertion", subtitle: "Choose whether selected GIFs paste as links or files.") {
-                    Picker("", selection: $gifInsertionMode) {
-                        ForEach(GIFInsertionMode.allCases, id: \.self) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 170)
-                    .onChange(of: gifInsertionMode) { _, newValue in
-                        AppSettings.shared.gifInsertionMode = newValue
-                    }
-                }
-            }
-
             SettingsSection(title: "Maintenance", subtitle: "Local app data", systemImage: "externaldrive") {
                 SettingsRow(icon: "chart.bar.xaxis", title: "Emoji frequency", subtitle: "Clear ranking data used by search results.") {
                     Button(role: .destructive) {
@@ -236,7 +204,6 @@ private struct ShortcutSettingsPane: View {
         VStack(spacing: 14) {
             SettingsSection(title: "Boards", subtitle: "Quick access windows", systemImage: "rectangle.grid.2x2") {
                 ShortcutRow(icon: "face.smiling", title: "Emoji Board", shortcut: "⌘ E")
-                ShortcutRow(icon: "photo.on.rectangle", title: "GIF Board", shortcut: "⌘ G")
             }
 
             SettingsSection(title: "Inline Selection", subtitle: "While the suggestion pill is visible", systemImage: "arrow.left.arrow.right") {
@@ -258,12 +225,6 @@ private struct FeatureToggleSettingsPane: View {
                     title: "Inline trigger",
                     subtitle: "Show the pill while typing a keyword.",
                     isOn: $appState.inlineTriggerEnabled
-                )
-                ToggleRow(
-                    icon: "sparkles",
-                    title: "GIF support",
-                    subtitle: "Allow GIF search and insertion.",
-                    isOn: $appState.gifFeatureEnabled
                 )
                 ToggleRow(
                     icon: "command",

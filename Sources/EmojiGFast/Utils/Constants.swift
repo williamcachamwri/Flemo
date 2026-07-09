@@ -5,7 +5,6 @@ enum Constants {
     static let defaultTriggerCharacter = "`"
     static let defaultMinTriggerLength = 2
     static let maxSuggestionResults = 10
-    static let maxGIFSuggestionResults = 3
     static let overlayPanelWidth: CGFloat = 340
     static let overlayPanelMaxHeight: CGFloat = 360
 

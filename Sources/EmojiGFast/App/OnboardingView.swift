@@ -18,7 +18,7 @@ struct OnboardingView: View {
             Text("Welcome to EmojiGFast")
                 .font(.title2).bold()
 
-            Text("Quick emoji & GIF inserter for macOS")
+            Text("Quick emoji inserter for macOS")
 
             Divider()
 
@@ -100,7 +100,7 @@ struct OnboardingView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Label("Type `keyword to trigger suggestions", systemImage: "keyboard")
                         Label("⌘ + 0-9 to select suggestion #", systemImage: "command")
-                        Label("Click menu bar icon → Emoji Board / GIF Board", systemImage: "menubar.rectangle")
+                        Label("Click menu bar icon → Emoji Board", systemImage: "menubar.rectangle")
                         Label("Press Esc to dismiss suggestions", systemImage: "escape")
                     }
                     .font(.caption)

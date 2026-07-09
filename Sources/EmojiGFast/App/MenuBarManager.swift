@@ -24,7 +24,6 @@ class MenuBarManager {
         }
 
         menu.addItem(item("Emoji Board", action: #selector(AppDelegate.toggleEmojiBoard), key: "e"))
-        menu.addItem(item("GIF Board", action: #selector(AppDelegate.toggleGIFBoard), key: "g"))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(item("Welcome / Onboarding", action: #selector(AppDelegate.showOnboarding)))
         menu.addItem(item("Check Permissions", action: #selector(AppDelegate.checkPermissions)))

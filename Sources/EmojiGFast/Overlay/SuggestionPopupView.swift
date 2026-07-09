@@ -3,7 +3,6 @@ import SwiftUI
 struct SuggestionPopupView: View {
     @ObservedObject var appState: AppState
     var emojiHandler: (Emoji) -> Void
-    var gifHandler: (GIFItem) -> Void
 
     var body: some View {
         let visibleItems = visibleSuggestions()
@@ -109,31 +108,4 @@ private struct PopupMetrics {
     let verticalPadding: CGFloat
     let fontSize: CGFloat
     let outerPadding: CGFloat
-}
-
-struct GIFPillButton: View {
-    let gif: GIFItem
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            AsyncImage(url: gif.previewURL) { phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable().aspectRatio(contentMode: .fit)
-                case .failure:
-                    Image(systemName: "photo").foregroundColor(.secondary)
-                case .empty:
-                    ProgressView().scaleEffect(0.5)
-                @unknown default:
-                    EmptyView()
-                }
-            }
-            .frame(width: 46, height: 46)
-            .background(Circle().fill(Color.white.opacity(0.12)))
-            .clipShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .help(gif.title)
-    }
 }

@@ -1,6 +1,5 @@
 import Cocoa
 import SwiftUI
-import UniformTypeIdentifiers
 import os.log
 
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -11,7 +10,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var onboardingWindow: NSWindow?
     private var settingsWindow: NSWindow?
     private var emojiBoardWindow: NSWindow?
-    private var gifBoardWindow: NSWindow?
     private var currentKeyword = ""
     private let log = OSLog(subsystem: "com.emoji-g-fast", category: "AppDelegate")
 
@@ -34,8 +32,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             let overlayContent = SuggestionPopupView(appState: appState) { [weak self] emoji in
                 self?.handleEmojiSelected(emoji)
-            } gifHandler: { [weak self] gif in
-                self?.handleGIFSelected(gif)
             }
             overlayPanel = OverlayPanel(contentView: NSHostingView(rootView: overlayContent))
 
@@ -56,8 +52,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             shortcutMonitor = ShortcutSelectionMonitor(appState: appState)
             shortcutMonitor.start(
-                emojiHandler: { [weak self] e in self?.handleEmojiSelected(e) },
-                gifHandler: { [weak self] g in self?.handleGIFSelected(g) }
+                emojiHandler: { [weak self] e in self?.handleEmojiSelected(e) }
             )
 
             showOnboardingIfNeeded()
@@ -99,7 +94,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         os_log(.info, "Show suggestions: '%{public}s'", keyword)
         let isSameKeyword = appState.isShowingSuggestions && currentKeyword == keyword
         currentKeyword = keyword
-        appState.gifSuggestions = []
         appState.inlinePopupHeight = popupHeight(for: anchorRect)
         let results = EmojiSearchEngine.shared.search(keyword: keyword, maxResults: 10)
         if !isSameKeyword || appState.suggestions.isEmpty {
@@ -140,7 +134,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func hideSuggestions() {
         appState.isShowingSuggestions = false
         appState.suggestions = []
-        appState.gifSuggestions = []
         appState.selectedSuggestionIndex = 0
         appState.visibleSuggestionStart = 0
         currentKeyword = ""
@@ -196,74 +189,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         hideSuggestions()
     }
 
-    private func handleGIFSelected(_ gif: GIFItem) {
-        let k = currentKeyword
-        let mode = AppSettings.shared.gifInsertionMode
-
-        if mode == .file {
-            Task {
-                await insertGIFAsFile(gif, keyword: k)
-            }
-        } else {
-            let url = gif.url.absoluteString
-            if !k.isEmpty {
-                TextInsertionHelper.shared.replaceTriggerText(
-                    triggerChar: appState.triggerCharacter, keyword: k, with: url)
-            } else {
-                TextInsertionHelper.shared.insertText(url)
-            }
-            hideSuggestions()
-        }
-    }
-
-    private func insertGIFAsFile(_ gif: GIFItem, keyword: String) async {
-        do {
-            let (data, _) = try await URLSession.shared.data(from: gif.url)
-            let tempDir = FileManager.default.temporaryDirectory
-            let ext = gif.url.pathExtension.isEmpty ? "gif" : gif.url.pathExtension
-            let fileName = "emoji-g-fast_\(gif.id).\(ext)"
-            let fileURL = tempDir.appendingPathComponent(fileName)
-            try data.write(to: fileURL)
-
-            await MainActor.run {
-                let pb = NSPasteboard.general
-                pb.clearContents()
-                pb.writeObjects([fileURL as NSURL])
-
-                guard let src = CGEventSource(stateID: .combinedSessionState) else {
-                    fallbackToLink(gif, keyword: keyword)
-                    return
-                }
-                let vKey: UInt16 = 0x09
-                if let down = CGEvent(keyboardEventSource: src, virtualKey: vKey, keyDown: true) {
-                    down.flags = .maskCommand
-                    down.post(tap: .cgAnnotatedSessionEventTap)
-                }
-                if let up = CGEvent(keyboardEventSource: src, virtualKey: vKey, keyDown: false) {
-                    up.flags = .maskCommand
-                    up.post(tap: .cgAnnotatedSessionEventTap)
-                }
-                hideSuggestions()
-            }
-        } catch {
-            os_log(.error, log: log, "GIF download failed: %{public}@", error.localizedDescription)
-            await MainActor.run {
-                fallbackToLink(gif, keyword: keyword)
-            }
-        }
-    }
-
-    private func fallbackToLink(_ gif: GIFItem, keyword: String) {
-        let url = gif.url.absoluteString
-        if !keyword.isEmpty {
-            TextInsertionHelper.shared.replaceTriggerText(
-                triggerChar: appState.triggerCharacter, keyword: keyword, with: url)
-        } else {
-            TextInsertionHelper.shared.insertText(url)
-        }
-        hideSuggestions()
-    }
-
     @objc func toggleEmojiBoard() {
         if let w = emojiBoardWindow, w.isVisible { w.close(); emojiBoardWindow = nil; return }
         let v = EmojiBoardView { [weak self] e in self?.handleEmojiSelected(e) }
@@ -273,17 +198,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         w.setContentSize(NSSize(width: 500, height: 600))
         w.makeKeyAndOrderFront(nil); w.center()
         emojiBoardWindow = w
-    }
-
-    @objc func toggleGIFBoard() {
-        if let w = gifBoardWindow, w.isVisible { w.close(); gifBoardWindow = nil; return }
-        let v = GIFBoardView { [weak self] g in self?.handleGIFSelected(g) }
-        let w = NSWindow(contentViewController: NSHostingController(rootView: v))
-        w.title = "GIF Board"
-        w.styleMask = [.titled, .closable, .resizable, .miniaturizable]
-        w.setContentSize(NSSize(width: 600, height: 500))
-        w.makeKeyAndOrderFront(nil); w.center()
-        gifBoardWindow = w
     }
 
     @objc func openSettings() {
@@ -323,7 +237,6 @@ class AppState: ObservableObject {
     static let shared = AppState()
     @Published var isShowingSuggestions = false
     @Published var suggestions: [SuggestionItem] = []
-    @Published var gifSuggestions: [GIFItem] = []
     @Published var triggerCharacter: String = AppSettings.shared.triggerCharacter {
         didSet { AppSettings.shared.triggerCharacter = triggerCharacter }
     }
@@ -332,9 +245,6 @@ class AppState: ObservableObject {
     }
     @Published var inlineTriggerEnabled: Bool = AppSettings.shared.inlineTriggerEnabled {
         didSet { AppSettings.shared.inlineTriggerEnabled = inlineTriggerEnabled }
-    }
-    @Published var gifFeatureEnabled: Bool = AppSettings.shared.gifFeatureEnabled {
-        didSet { AppSettings.shared.gifFeatureEnabled = gifFeatureEnabled }
     }
     @Published var numberShortcutEnabled: Bool = AppSettings.shared.numberShortcutEnabled {
         didSet { AppSettings.shared.numberShortcutEnabled = numberShortcutEnabled }
@@ -349,7 +259,6 @@ class AppState: ObservableObject {
         triggerCharacter = AppSettings.shared.triggerCharacter
         minTriggerLength = AppSettings.shared.minTriggerLength
         inlineTriggerEnabled = AppSettings.shared.inlineTriggerEnabled
-        gifFeatureEnabled = AppSettings.shared.gifFeatureEnabled
         numberShortcutEnabled = AppSettings.shared.numberShortcutEnabled
     }
 }
