@@ -2,7 +2,18 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
     <title>Flemo Release Updates</title>
-    <link>https://williamcachamwri.github.io/Flemo/appcast.xml</link>
-    <description>Release appcast for Flemo, served via GitHub Pages. Updated automatically by CI on each tagged release.</description>
+    <link>https://github.com/williamcachamwri/Flemo/releases</link>
+    <description>Release appcast for Flemo.</description>
+    <item>
+      <title>Flemo 1.1.1</title>
+      <sparkle:version>3</sparkle:version>
+      <sparkle:shortVersionString>1.1.1</sparkle:shortVersionString>
+      <pubDate>Thu, 09 Jul 2026 15:05:23 +0000</pubDate>
+      <enclosure
+        url="https://github.com/williamcachamwri/Flemo/releases/download/v1.1.1/Flemo-Release-v1.1.1.zip"
+        sparkle:edSignature="CSFL3F1iNPitCoZonqFbX5FiegYxHObenHvh8j6IcCpx0YyGroei3w/PxQxILh+SFZgvJRJ+yOf8e43H7Y56Bg=="
+        length="3374995"
+        type="application/octet-stream" />
+    </item>
   </channel>
 </rss>
