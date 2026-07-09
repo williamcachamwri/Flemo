@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 struct EmojiBoardView: View {
+    @ObservedObject private var appState = AppState.shared
     @State private var searchText = ""
     @State private var selectedCategory = "All"
     @State private var hoveredEmoji: Emoji?
@@ -13,7 +14,7 @@ struct EmojiBoardView: View {
     ]
 
     private var categories: [String] {
-        let available = Set(EmojiDataLoader.shared.allEmojis.map { $0.category })
+        let available = Set(displayEmojis.map { $0.category })
         let preferred = [
             "All",
             "Smileys & Emotion",
@@ -30,6 +31,13 @@ struct EmojiBoardView: View {
         return preferred.filter { $0 == "All" || available.contains($0) } + extra
     }
 
+    private var displayEmojis: [Emoji] {
+        EmojiSkinToneNormalizer.preferredEmojis(
+            from: EmojiDataLoader.shared.allEmojis,
+            skinTone: appState.preferredSkinTone
+        )
+    }
+
     private var filteredEmojis: [Emoji] {
         let keyword = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !keyword.isEmpty {
@@ -37,10 +45,10 @@ struct EmojiBoardView: View {
         }
 
         if selectedCategory == "All" {
-            return EmojiDataLoader.shared.allEmojis
+            return displayEmojis
         }
 
-        return EmojiDataLoader.shared.allEmojis.filter { $0.category == selectedCategory }
+        return displayEmojis.filter { $0.category == selectedCategory }
     }
 
     var body: some View {
@@ -187,9 +195,9 @@ struct EmojiBoardView: View {
 
     private func count(for category: String) -> Int {
         if category == "All" {
-            return EmojiDataLoader.shared.allEmojis.count
+            return displayEmojis.count
         }
-        return EmojiDataLoader.shared.allEmojis.filter { $0.category == category }.count
+        return displayEmojis.filter { $0.category == category }.count
     }
 
     private func shortTitle(for category: String) -> String {

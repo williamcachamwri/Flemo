@@ -22,7 +22,11 @@ class EmojiSearchEngine {
         }
 
         scored.sort { $0.1 > $1.1 }
-        return scored.prefix(maxResults).map { $0.0 }
+        let preferred = EmojiSkinToneNormalizer.preferredEmojis(
+            from: scored.map { $0.0 },
+            skinTone: AppSettings.shared.preferredSkinTone
+        )
+        return Array(preferred.prefix(maxResults))
     }
 
     private func scoreEmoji(_ emoji: Emoji, keyword: String) -> Int {
@@ -51,18 +55,29 @@ class EmojiSearchEngine {
     }
 
     private func topFrequentlyUsed(limit: Int) -> [Emoji] {
-        let freq = FrequencyTracker.shared.topEmojiCharacters(limit: limit * 2)
+        let freq = FrequencyTracker.shared.topEmojiCharacters(limit: limit * 8)
         var result: [Emoji] = []
         var seen = Set<String>()
         for char in freq {
-            if let emoji = dataLoader.allEmojis.first(where: { $0.character == char }), !seen.contains(char) {
-                result.append(emoji)
-                seen.insert(char)
+            if let emoji = dataLoader.allEmojis.first(where: { $0.character == char }) {
+                let preferred = EmojiSkinToneNormalizer.preferredReplacement(
+                    for: emoji,
+                    in: dataLoader.allEmojis,
+                    skinTone: AppSettings.shared.preferredSkinTone
+                )
+                let key = EmojiSkinToneNormalizer.baseKey(for: preferred.character)
+                guard !seen.contains(key) else { continue }
+                result.append(preferred)
+                seen.insert(key)
                 if result.count >= limit { break }
             }
         }
         if result.isEmpty {
-            result = Array(dataLoader.allEmojis.prefix(limit))
+            result = Array(
+                EmojiSkinToneNormalizer
+                    .preferredEmojis(from: dataLoader.allEmojis, skinTone: AppSettings.shared.preferredSkinTone)
+                    .prefix(limit)
+            )
         }
         return result
     }

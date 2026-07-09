@@ -30,7 +30,8 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 cp "$BUILD_DIR/release/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/"
 cp "$PROJECT_DIR/Info.plist" "$APP_BUNDLE/Contents/"
 
-cp "$PROJECT_DIR/Sources/EmojiGFast/Resources/emoji-data.json" "$APP_BUNDLE/Contents/Resources/"
+cp "$PROJECT_DIR/Sources/Flemo/Resources/Flemo.icns" "$APP_BUNDLE/Contents/Resources/"
+cp "$PROJECT_DIR/Sources/Flemo/Resources/emoji-data.json" "$APP_BUNDLE/Contents/Resources/"
 
 RESOURCE_BUNDLE="$BUILD_DIR/out/Products/Release/Flemo_Flemo.bundle"
 if [ -d "$RESOURCE_BUNDLE" ]; then

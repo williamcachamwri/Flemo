@@ -45,6 +45,11 @@ class AppSettings {
         set { current.popupTheme = newValue; persist() }
     }
 
+    var preferredSkinTone: EmojiSkinTone {
+        get { current.preferredSkinTone }
+        set { current.preferredSkinTone = newValue; persist() }
+    }
+
     var ignoredSiteRules: [IgnoredSiteRule] {
         get { current.ignoredSiteRules }
         set { current.ignoredSiteRules = newValue; persist() }
@@ -69,7 +74,8 @@ class AppSettings {
                 emojiBoardShortcut: ShortcutKey(keyCode: 0x00, modifiers: 0x0100),
                 inlinePanelOpenMode: .recents,
                 inlineSuggestionLayout: .sleek,
-                popupTheme: .nativeDark
+                popupTheme: .nativeDark,
+                preferredSkinTone: .standard
             )
         }
     }
@@ -88,6 +94,7 @@ class AppSettings {
             inlinePanelOpenMode: .recents,
             inlineSuggestionLayout: .sleek,
             popupTheme: .nativeDark,
+            preferredSkinTone: .standard,
             ignoredSiteRules: [],
             ignoredAppRules: []
         )

@@ -213,6 +213,13 @@ private struct EmojiSettingsPane: View {
                 )
             }
 
+            SettingsSectionTitle("Appearance")
+
+            SettingsGroup {
+                SkinTonePreferencePicker(selection: $appState.preferredSkinTone)
+                    .padding(14)
+            }
+
             SettingsSectionTitle("Inline Suggestions")
 
             SettingsGroup {
@@ -454,6 +461,264 @@ private struct InlineSuggestionSettingsPreview: View {
                     .offset(x: -proxy.size.width * 0.12, y: proxy.size.height * 0.22)
             }
         }
+    }
+}
+
+private enum SkinTonePreviewCharacter: String, CaseIterable, Identifiable {
+    case person
+    case man
+    case woman
+
+    var id: String { rawValue }
+
+    var baseEmoji: String {
+        switch self {
+        case .person: return "🧑"
+        case .man: return "👨"
+        case .woman: return "👩"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .person: return "Person"
+        case .man: return "Man"
+        case .woman: return "Woman"
+        }
+    }
+}
+
+private struct SkinTonePreferencePicker: View {
+    @Binding var selection: EmojiSkinTone
+    @Namespace private var swatchNamespace
+    @State private var focusedCharacter: SkinTonePreviewCharacter = .person
+
+    private var focusedEmoji: String {
+        selection.applied(to: focusedCharacter.baseEmoji)
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 14) {
+                ZStack {
+                    SkinTonePreviewGrid()
+
+                    Text(focusedEmoji)
+                        .font(.system(size: 112))
+                        .minimumScaleFactor(0.72)
+                        .shadow(color: .black.opacity(0.26), radius: 16, y: 10)
+                        .id(selection.id + focusedCharacter.id)
+                        .transition(.softBlurSwap)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 154)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                VStack(spacing: 9) {
+                    ForEach(SkinTonePreviewCharacter.allCases) { character in
+                        SkinToneCharacterButton(
+                            character: character,
+                            skinTone: selection,
+                            isSelected: focusedCharacter == character
+                        ) {
+                            withAnimation(.spring(response: 0.34, dampingFraction: 0.78, blendDuration: 0.10)) {
+                                focusedCharacter = character
+                            }
+                        }
+                    }
+                }
+                .frame(width: 52)
+            }
+
+            HStack(spacing: 10) {
+                ForEach(EmojiSkinTone.allCases) { tone in
+                    SkinToneSwatchButton(
+                        tone: tone,
+                        isSelected: selection == tone,
+                        namespace: swatchNamespace
+                    ) {
+                        withAnimation(.spring(response: 0.36, dampingFraction: 0.76, blendDuration: 0.10)) {
+                            selection = tone
+                        }
+                    }
+                }
+            }
+        }
+        .animation(.spring(response: 0.36, dampingFraction: 0.78, blendDuration: 0.10), value: selection)
+        .animation(.spring(response: 0.34, dampingFraction: 0.78, blendDuration: 0.10), value: focusedCharacter)
+    }
+}
+
+private struct SkinToneCharacterButton: View {
+    let character: SkinTonePreviewCharacter
+    let skinTone: EmojiSkinTone
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(skinTone.applied(to: character.baseEmoji))
+                .font(.system(size: isSelected ? 31 : 24))
+                .frame(width: 42, height: 42)
+                .background(
+                    Circle()
+                        .fill(Color.white.opacity(isSelected ? 0.12 : 0.04))
+                )
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(isSelected ? 0.28 : 0.06), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(isSelected ? 0.22 : 0.0), radius: 8, y: 4)
+                .id(skinTone.id + character.id)
+                .transition(.softBlurSwap)
+        }
+        .buttonStyle(.plain)
+        .help(character.title)
+    }
+}
+
+private struct SkinToneSwatchButton: View {
+    let tone: EmojiSkinTone
+    let isSelected: Bool
+    let namespace: Namespace.ID
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(tone.swatchFill)
+                .frame(width: 42, height: 26)
+                .overlay {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(Color.white.opacity(0.92), lineWidth: 2)
+                            .matchedGeometryEffect(id: "selectedSkinTone", in: namespace)
+                    }
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.black.opacity(0.18), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(isSelected ? 0.30 : 0.08), radius: isSelected ? 12 : 4, y: isSelected ? 7 : 2)
+                .scaleEffect(isSelected ? 1.08 : 1.0)
+                .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .help(tone.rawValue)
+    }
+}
+
+private struct SkinTonePreviewGrid: View {
+    var body: some View {
+        GeometryReader { proxy in
+            let size = proxy.size
+
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(0.035),
+                        Color.black.opacity(0.08)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+
+                Path { path in
+                    for fraction in [0.25, 0.5, 0.75] {
+                        let x = size.width * fraction
+                        path.move(to: CGPoint(x: x, y: 8))
+                        path.addLine(to: CGPoint(x: x, y: size.height - 8))
+                    }
+
+                    for fraction in [0.30, 0.70] {
+                        let y = size.height * fraction
+                        path.move(to: CGPoint(x: 14, y: y))
+                        path.addLine(to: CGPoint(x: size.width - 14, y: y))
+                    }
+                }
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+
+                Path { path in
+                    let y = size.height * 0.56
+                    path.move(to: CGPoint(x: 24, y: y))
+                    path.addLine(to: CGPoint(x: size.width - 24, y: y))
+                }
+                .stroke(Color.white.opacity(0.12), style: StrokeStyle(lineWidth: 1, dash: [2, 7]))
+            }
+        }
+    }
+}
+
+private extension EmojiSkinTone {
+    var swatchFill: LinearGradient {
+        LinearGradient(
+            colors: swatchColors,
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private var swatchColors: [Color] {
+        switch self {
+        case .standard:
+            return [
+                Color(red: 1.00, green: 0.80, blue: 0.24),
+                Color(red: 0.94, green: 0.64, blue: 0.10)
+            ]
+        case .light:
+            return [
+                Color(red: 1.00, green: 0.83, blue: 0.62),
+                Color(red: 0.92, green: 0.66, blue: 0.41)
+            ]
+        case .mediumLight:
+            return [
+                Color(red: 0.86, green: 0.58, blue: 0.34),
+                Color(red: 0.72, green: 0.43, blue: 0.22)
+            ]
+        case .medium:
+            return [
+                Color(red: 0.66, green: 0.40, blue: 0.23),
+                Color(red: 0.50, green: 0.28, blue: 0.14)
+            ]
+        case .mediumDark:
+            return [
+                Color(red: 0.43, green: 0.25, blue: 0.15),
+                Color(red: 0.30, green: 0.16, blue: 0.09)
+            ]
+        case .dark:
+            return [
+                Color(red: 0.28, green: 0.18, blue: 0.13),
+                Color(red: 0.17, green: 0.10, blue: 0.07)
+            ]
+        }
+    }
+}
+
+private struct BlurSwapTransitionModifier: ViewModifier {
+    let blurRadius: CGFloat
+    let scale: CGFloat
+    let opacity: Double
+
+    func body(content: Content) -> some View {
+        content
+            .blur(radius: blurRadius)
+            .scaleEffect(scale)
+            .opacity(opacity)
+    }
+}
+
+private extension AnyTransition {
+    static var softBlurSwap: AnyTransition {
+        .asymmetric(
+            insertion: .modifier(
+                active: BlurSwapTransitionModifier(blurRadius: 10, scale: 0.88, opacity: 0),
+                identity: BlurSwapTransitionModifier(blurRadius: 0, scale: 1, opacity: 1)
+            ),
+            removal: .modifier(
+                active: BlurSwapTransitionModifier(blurRadius: 12, scale: 1.08, opacity: 0),
+                identity: BlurSwapTransitionModifier(blurRadius: 0, scale: 1, opacity: 1)
+            )
+        )
     }
 }
 
@@ -1066,16 +1331,39 @@ private struct AppLogoImage: View {
     let size: CGFloat
 
     var body: some View {
-        Image(systemName: "face.smiling.fill")
-            .font(.system(size: size * 0.72, weight: .bold, design: .rounded))
-            .foregroundStyle(
-                LinearGradient(
-                    colors: [.accentColor, .cyan],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+        if let image = Self.iconImage {
+            Image(nsImage: image)
+                .resizable()
+                .interpolation(.high)
+                .antialiased(true)
+                .frame(width: size, height: size)
+                .clipShape(RoundedRectangle(cornerRadius: size * 0.22, style: .continuous))
+                .shadow(color: .black.opacity(0.18), radius: 3, y: 1)
+        } else {
+            Image(systemName: "face.smiling.fill")
+                .font(.system(size: size * 0.72, weight: .bold, design: .rounded))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [.accentColor, .cyan],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
                 )
-            )
-            .frame(width: size, height: size)
+                .frame(width: size, height: size)
+        }
+    }
+
+    private static var iconImage: NSImage? {
+        let urls = [
+            Bundle.main.url(forResource: "Flemo", withExtension: "icns"),
+            Bundle.main.resourceURL?.appendingPathComponent("Flemo.icns"),
+            Bundle.main.executableURL?
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appendingPathComponent("Resources/Flemo.icns")
+        ]
+
+        return urls.compactMap { $0 }.compactMap { NSImage(contentsOf: $0) }.first
     }
 }
 

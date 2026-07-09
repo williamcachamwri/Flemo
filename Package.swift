@@ -9,7 +9,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "Flemo",
-            path: "Sources/EmojiGFast",
+            path: "Sources/Flemo",
             resources: [
                 .process("Resources")
             ]

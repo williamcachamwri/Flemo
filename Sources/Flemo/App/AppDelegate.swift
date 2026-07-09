@@ -322,6 +322,9 @@ class AppState: ObservableObject {
     @Published var popupTheme: PopupTheme = AppSettings.shared.popupTheme {
         didSet { AppSettings.shared.popupTheme = popupTheme }
     }
+    @Published var preferredSkinTone: EmojiSkinTone = AppSettings.shared.preferredSkinTone {
+        didSet { AppSettings.shared.preferredSkinTone = preferredSkinTone }
+    }
     @Published var ignoredSiteRules: [IgnoredSiteRule] = AppSettings.shared.ignoredSiteRules {
         didSet { AppSettings.shared.ignoredSiteRules = ignoredSiteRules }
     }
@@ -343,6 +346,7 @@ class AppState: ObservableObject {
         inlinePanelOpenMode = AppSettings.shared.inlinePanelOpenMode
         inlineSuggestionLayout = AppSettings.shared.inlineSuggestionLayout
         popupTheme = AppSettings.shared.popupTheme
+        preferredSkinTone = AppSettings.shared.preferredSkinTone
         ignoredSiteRules = AppSettings.shared.ignoredSiteRules
         ignoredAppRules = AppSettings.shared.ignoredAppRules
     }
