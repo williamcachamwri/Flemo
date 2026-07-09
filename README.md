@@ -15,11 +15,7 @@
 </p>
 
 <p align="center">
-  <a href="docs/assets/flemo-demo.mp4">Watch the demo video</a>
-</p>
-
-<p align="center">
-  <video src="docs/assets/flemo-demo.mp4" controls width="720"></video>
+  <img src="docs/assets/flemo-demo.gif" width="720" alt="Flemo demo">
 </p>
 
 ## Overview
@@ -34,10 +30,6 @@ Flemo sits quietly in the macOS menu bar and brings emoji search directly to you
 - Rules for ignored apps and sites.
 - Local usage stats and frequency-aware ranking.
 - Sparkle-powered update hooks with separate Debug and Release channels.
-
-## Demo
-
-The sample recording is included at [docs/assets/flemo-demo.mp4](docs/assets/flemo-demo.mp4).
 
 ## Build
 
@@ -61,8 +53,8 @@ Flemo keeps Debug and Release update tracks separate so Sparkle never crosses st
 
 | Channel | App bundle | Bundle ID | Default appcast |
 | --- | --- | --- | --- |
-| Debug | `Flemo Debug.app` | `com.flemo.debug` | `https://example.com/flemo/debug/appcast.xml` |
-| Release | `Flemo.app` | `com.flemo.app` | `https://example.com/flemo/appcast.xml` |
+| Debug | `Flemo Debug.app` | `com.flemo.debug` | `https://williamcachamwri.github.io/Flemo/debug-appcast.xml` |
+| Release | `Flemo.app` | `com.flemo.app` | `https://williamcachamwri.github.io/Flemo/appcast.xml` |
 
 Configure real feeds and public EdDSA keys with:
 
@@ -77,7 +69,7 @@ See [docs/SPARKLE.md](docs/SPARKLE.md) for release notes and signing setup.
 
 ## CI
 
-GitHub Actions builds both Debug and Release `.app` bundles and uploads zipped artifacts from every push, pull request, and manual run.
+GitHub Actions builds both Debug and Release `.app` bundles for every push, pull request, and manual run. Tag pushes like `v1.1.1` also create a GitHub Release with zipped app bundles and appcast files.
 
 ## Requirements
 

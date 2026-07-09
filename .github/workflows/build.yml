@@ -9,6 +9,9 @@ on:
       - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build macOS app
@@ -40,7 +43,12 @@ jobs:
       - name: Archive debug app
         run: |
           mkdir -p artifacts
-          ditto -c -k --keepParent ".build/Flemo Debug.app" "artifacts/Flemo-Debug-${GITHUB_SHA}.zip"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            archive_name="Flemo-Debug-${GITHUB_REF_NAME}.zip"
+          else
+            archive_name="Flemo-Debug-${GITHUB_SHA}.zip"
+          fi
+          ditto -c -k --keepParent ".build/Flemo Debug.app" "artifacts/${archive_name}"
 
       - name: Build release app
         env:
@@ -54,11 +62,123 @@ jobs:
       - name: Archive release app
         run: |
           mkdir -p artifacts
-          ditto -c -k --keepParent ".build/Flemo.app" "artifacts/Flemo-Release-${GITHUB_SHA}.zip"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            archive_name="Flemo-Release-${GITHUB_REF_NAME}.zip"
+          else
+            archive_name="Flemo-Release-${GITHUB_SHA}.zip"
+          fi
+          ditto -c -k --keepParent ".build/Flemo.app" "artifacts/${archive_name}"
+
+      - name: Generate and sign appcasts
+        if: github.ref_type == 'tag'
+        env:
+          FLEMO_RELEASE_SPARKLE_PRIVATE_KEY: ${{ secrets.FLEMO_RELEASE_SPARKLE_PRIVATE_KEY }}
+          FLEMO_DEBUG_SPARKLE_PRIVATE_KEY: ${{ secrets.FLEMO_DEBUG_SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          short_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Info.plist)"
+          build_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' Info.plist)"
+          pub_date="$(date -u '+%a, %d %b %Y %H:%M:%S +0000')"
+          release_base="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}"
+          release_zip="Flemo-Release-${GITHUB_REF_NAME}.zip"
+          debug_zip="Flemo-Debug-${GITHUB_REF_NAME}.zip"
+
+          sign_update_bin="$(find .build -type f -name sign_update ! -path "*old_dsa_scripts*" 2>/dev/null | head -n1)"
+          if [ -z "$sign_update_bin" ]; then
+            echo "sign_update binary not found in .build" >&2
+            exit 1
+          fi
+          chmod +x "$sign_update_bin"
+
+          release_sig="$(printf '%s' "$FLEMO_RELEASE_SPARKLE_PRIVATE_KEY" | "$sign_update_bin" --ed-key-file - -p "artifacts/${release_zip}")"
+          release_size="$(stat -f%z "artifacts/${release_zip}")"
+          debug_sig="$(printf '%s' "$FLEMO_DEBUG_SPARKLE_PRIVATE_KEY" | "$sign_update_bin" --ed-key-file - -p "artifacts/${debug_zip}")"
+          debug_size="$(stat -f%z "artifacts/${debug_zip}")"
+
+          cat > artifacts/appcast.xml <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>Flemo Release Updates</title>
+              <link>https://github.com/${GITHUB_REPOSITORY}/releases</link>
+              <description>Release appcast for Flemo.</description>
+              <item>
+                <title>Flemo ${short_version}</title>
+                <sparkle:version>${build_version}</sparkle:version>
+                <sparkle:shortVersionString>${short_version}</sparkle:shortVersionString>
+                <pubDate>${pub_date}</pubDate>
+                <enclosure
+                  url="${release_base}/${release_zip}"
+                  sparkle:edSignature="${release_sig}"
+                  length="${release_size}"
+                  type="application/octet-stream" />
+              </item>
+            </channel>
+          </rss>
+          EOF
+
+          cat > artifacts/debug-appcast.xml <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>Flemo Debug Updates</title>
+              <link>https://github.com/${GITHUB_REPOSITORY}/releases</link>
+              <description>Debug appcast for Flemo.</description>
+              <item>
+                <title>Flemo Debug ${short_version}</title>
+                <sparkle:version>${build_version}</sparkle:version>
+                <sparkle:shortVersionString>${short_version}</sparkle:shortVersionString>
+                <pubDate>${pub_date}</pubDate>
+                <enclosure
+                  url="${release_base}/${debug_zip}"
+                  sparkle:edSignature="${debug_sig}"
+                  length="${debug_size}"
+                  type="application/octet-stream" />
+              </item>
+            </channel>
+          </rss>
+          EOF
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: flemo-macos-apps
-          path: artifacts/*.zip
+          path: artifacts/*
           if-no-files-found: error
+
+      - name: Publish GitHub release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          release_title="Flemo ${GITHUB_REF_NAME}"
+          release_notes="Flemo ${GITHUB_REF_NAME} macOS builds. Release and Debug are separate Sparkle channels."
+
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" artifacts/* --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" artifacts/* \
+              --title "${release_title}" \
+              --notes "${release_notes}"
+          fi
+
+      - name: Publish appcasts to repo root (GitHub Pages)
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --depth=1 origin main
+          git checkout -B main origin/main
+          cp artifacts/appcast.xml ./appcast.xml
+          cp artifacts/debug-appcast.xml ./debug-appcast.xml
+          git add appcast.xml debug-appcast.xml
+          if git diff --cached --quiet; then
+            echo "No appcast changes to commit."
+          else
+            git commit -m "chore(appcast): publish feeds for ${GITHUB_REF_NAME} [skip ci]"
+            git push origin main
+          fi

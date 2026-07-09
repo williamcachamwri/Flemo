@@ -15,8 +15,8 @@ case "$BUILD_CONFIGURATION" in
     UPDATE_CHANNEL="debug"
     APP_DISPLAY_NAME="${APP_DISPLAY_NAME:-Flemo Debug}"
     APP_BUNDLE_ID="${APP_BUNDLE_ID:-com.flemo.debug}"
-    DEFAULT_APPCAST_URL="${FLEMO_DEBUG_APPCAST_URL:-https://example.com/flemo/debug/appcast.xml}"
-    DEFAULT_PUBLIC_ED_KEY="${FLEMO_DEBUG_SPARKLE_PUBLIC_KEY:-}"
+    DEFAULT_APPCAST_URL="${FLEMO_DEBUG_APPCAST_URL:-https://williamcachamwri.github.io/Flemo/debug-appcast.xml}"
+    DEFAULT_PUBLIC_ED_KEY="${FLEMO_DEBUG_SPARKLE_PUBLIC_KEY:-kmgFrpsnhiRikJxjk0bdQYDP0Rp11IXJh1XKTGA0b+U=}"
     ;;
   release)
     SWIFT_CONFIGURATION="release"
@@ -24,8 +24,8 @@ case "$BUILD_CONFIGURATION" in
     UPDATE_CHANNEL="release"
     APP_DISPLAY_NAME="${APP_DISPLAY_NAME:-Flemo}"
     APP_BUNDLE_ID="${APP_BUNDLE_ID:-com.flemo.app}"
-    DEFAULT_APPCAST_URL="${FLEMO_RELEASE_APPCAST_URL:-https://example.com/flemo/appcast.xml}"
-    DEFAULT_PUBLIC_ED_KEY="${FLEMO_RELEASE_SPARKLE_PUBLIC_KEY:-}"
+    DEFAULT_APPCAST_URL="${FLEMO_RELEASE_APPCAST_URL:-https://williamcachamwri.github.io/Flemo/appcast.xml}"
+    DEFAULT_PUBLIC_ED_KEY="${FLEMO_RELEASE_SPARKLE_PUBLIC_KEY:-4slBdkmHZvJCso7Heq+LuWurh8RbBpH+tna43b5lks0=}"
     ;;
   *)
     echo "Unsupported BUILD_CONFIGURATION: $BUILD_CONFIGURATION" >&2
