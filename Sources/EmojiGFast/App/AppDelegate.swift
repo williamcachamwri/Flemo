@@ -203,18 +203,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func openSettings() {
         NSApplication.shared.activate(ignoringOtherApps: true)
         if let w = settingsWindow, w.isVisible { w.makeKeyAndOrderFront(nil); return }
-        let w = NSWindow(contentViewController: NSHostingController(rootView: SettingsView()))
-        w.title = ""
-        w.styleMask = [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView]
-        w.titleVisibility = .hidden
-        w.titlebarAppearsTransparent = true
-        if #available(macOS 11.0, *) {
-            w.titlebarSeparatorStyle = .none
-        }
+        let size = NSSize(width: 560, height: 460)
+        let w = KeyableWindow(
+            contentRect: NSRect(origin: .zero, size: size),
+            styleMask: [.borderless, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        w.level = .normal
+        w.backgroundColor = .clear
+        w.isOpaque = false
+        w.hasShadow = true
         w.isMovableByWindowBackground = true
-        w.backgroundColor = NSColor(red: 0.105, green: 0.105, blue: 0.112, alpha: 1)
-        w.setContentSize(NSSize(width: 896, height: 760))
-        w.minSize = NSSize(width: 860, height: 620)
+        w.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        w.isReleasedWhenClosed = false
+
+        let hostingView = NSHostingView(rootView: SettingsView())
+        hostingView.frame = NSRect(origin: .zero, size: size)
+        hostingView.wantsLayer = true
+        hostingView.layer?.cornerRadius = 20
+        hostingView.layer?.masksToBounds = true
+        w.contentView = hostingView
         w.makeKeyAndOrderFront(nil); w.center()
         settingsWindow = w
     }
