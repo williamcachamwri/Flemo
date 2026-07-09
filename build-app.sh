@@ -101,7 +101,7 @@ fi
 
 echo "Code signing..."
 codesign --force --deep --options runtime --sign "$SIGN_IDENTITY" "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework"
-codesign --force --deep --options runtime --sign "$SIGN_IDENTITY" "$APP_BUNDLE"
+codesign --force --deep --options runtime --entitlements "$PROJECT_DIR/Flemo.entitlements" --sign "$SIGN_IDENTITY" "$APP_BUNDLE"
 
 echo "✅ App bundle created: $APP_BUNDLE"
 echo "   Bundle ID: $APP_BUNDLE_ID"
