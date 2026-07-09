@@ -31,6 +31,15 @@ Flemo sits quietly in the macOS menu bar and brings emoji search directly to you
 - Local usage stats and frequency-aware ranking.
 - Sparkle-powered update hooks with separate Debug and Release channels.
 
+## Install
+
+Download the latest `Flemo-Release-vX.Y.Z.zip` from [Releases](https://github.com/williamcachamwri/Flemo/releases), unzip it, and drag `Flemo.app` into `/Applications`. The app is ad-hoc signed (not notarized), so clear the quarantine flag and open it:
+
+```sh
+sudo xattr -dr com.apple.quarantine /Applications/Flemo.app
+open /Applications/Flemo.app
+```
+
 ## Build
 
 ```sh
@@ -69,7 +78,7 @@ See [docs/SPARKLE.md](docs/SPARKLE.md) for release notes and signing setup.
 
 ## CI
 
-GitHub Actions builds both Debug and Release `.app` bundles for every push, pull request, and manual run. Tag pushes like `v1.1.1` also create a GitHub Release with zipped app bundles and appcast files.
+GitHub Actions builds both Debug and Release `.app` bundles for every push, pull request, and manual run. Tag pushes like `v1.1.1` create a GitHub Release with zipped app bundles, appcast files, and auto-generated notes (commit changelog + contributors).
 
 ## Requirements
 

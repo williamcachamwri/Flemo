@@ -393,22 +393,42 @@ struct OnboardingView: View {
 
 private struct WelcomeMark: View {
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [.accentColor, .cyan],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .shadow(color: Color.accentColor.opacity(0.45), radius: 22, y: 8)
-
-            Image(systemName: "face.smiling.fill")
-                .font(.system(size: 36, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
+        Group {
+            if let image = Self.appIcon {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .antialiased(true)
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [.accentColor, .cyan],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    Image(systemName: "face.smiling.fill")
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                }
+            }
         }
-        .frame(width: 76, height: 76)
+        .frame(width: 86, height: 86)
+        .shadow(color: Color.accentColor.opacity(0.40), radius: 22, y: 8)
+    }
+
+    private static var appIcon: NSImage? {
+        let urls = [
+            Bundle.main.url(forResource: "Flemo", withExtension: "icns"),
+            Bundle.main.resourceURL?.appendingPathComponent("Flemo.icns"),
+            Bundle.main.executableURL?
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appendingPathComponent("Resources/Flemo.icns")
+        ]
+        return urls.compactMap { $0 }.compactMap { NSImage(contentsOf: $0) }.first
     }
 }
 
