@@ -5,14 +5,14 @@
     <link>https://github.com/williamcachamwri/Flemo/releases</link>
     <description>Release appcast for Flemo.</description>
     <item>
-      <title>Flemo 1.1.5</title>
-      <sparkle:version>7</sparkle:version>
-      <sparkle:shortVersionString>1.1.5</sparkle:shortVersionString>
-      <pubDate>Thu, 09 Jul 2026 21:24:13 +0000</pubDate>
+      <title>Flemo 1.1.6</title>
+      <sparkle:version>8</sparkle:version>
+      <sparkle:shortVersionString>1.1.6</sparkle:shortVersionString>
+      <pubDate>Thu, 09 Jul 2026 21:42:37 +0000</pubDate>
       <enclosure
-        url="https://github.com/williamcachamwri/Flemo/releases/download/v1.1.5/Flemo-Release-v1.1.5.zip"
-        sparkle:edSignature="7sp1QgUdyesJYe3Skrt9BQNEL2QSErMEvo7OfrMKcqa4qGJ11VDr3Bw7z6PYMxvie0Ip0g6RXC+HhHfR0QmgBw=="
-        length="3450318"
+        url="https://github.com/williamcachamwri/Flemo/releases/download/v1.1.6/Flemo-Release-v1.1.6.zip"
+        sparkle:edSignature="vAu4I2Q7kvTc4ayxjfrqmXptcIRXjzunOh4UaSOSE57LHu6EDiLElz661mhB6aqs9XA/u4iCi1wJFoc1fceuDA=="
+        length="3443396"
         type="application/octet-stream" />
     </item>
   </channel>
