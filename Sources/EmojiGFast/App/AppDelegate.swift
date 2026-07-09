@@ -205,8 +205,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let w = NSWindow(contentViewController: NSHostingController(rootView: SettingsView()))
         w.title = "Settings"
         w.styleMask = [.titled, .closable, .resizable, .miniaturizable]
-        w.setContentSize(NSSize(width: 720, height: 520))
-        w.minSize = NSSize(width: 680, height: 480)
+        w.setContentSize(NSSize(width: 900, height: 620))
+        w.minSize = NSSize(width: 860, height: 580)
         w.makeKeyAndOrderFront(nil); w.center()
         settingsWindow = w
     }
