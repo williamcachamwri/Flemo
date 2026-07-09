@@ -40,14 +40,6 @@ class AppSettings {
         set { current.inlineSuggestionLayout = newValue; persist() }
     }
 
-    var inlineSuggestionScale: Double {
-        get { current.inlineSuggestionScale }
-        set {
-            current.inlineSuggestionScale = min(max(newValue, 0.75), 1.25)
-            persist()
-        }
-    }
-
     private var current: AppSettingsData
 
     private init() {
@@ -61,8 +53,7 @@ class AppSettings {
                 numberShortcutEnabled: true,
                 emojiBoardShortcut: ShortcutKey(keyCode: 0x00, modifiers: 0x0100),
                 inlinePanelOpenMode: .recents,
-                inlineSuggestionLayout: .sleek,
-                inlineSuggestionScale: 1.0
+                inlineSuggestionLayout: .sleek
             )
         }
     }
@@ -79,8 +70,7 @@ class AppSettings {
             numberShortcutEnabled: true,
             emojiBoardShortcut: ShortcutKey(keyCode: 0x00, modifiers: 0x0100),
             inlinePanelOpenMode: .recents,
-            inlineSuggestionLayout: .sleek,
-            inlineSuggestionScale: 1.0
+            inlineSuggestionLayout: .sleek
         )
         persist()
     }

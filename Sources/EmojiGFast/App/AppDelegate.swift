@@ -95,6 +95,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         os_log(.info, "Show suggestions: '%{public}s'", keyword)
         let isSameKeyword = appState.isShowingSuggestions && currentKeyword == keyword
         currentKeyword = keyword
+        appState.currentSuggestionQuery = keyword
         currentSuggestionReplacesTrigger = true
         appState.inlinePopupHeight = popupHeight(for: anchorRect)
         let results = EmojiSearchEngine.shared.search(keyword: keyword, maxResults: 10)
@@ -112,6 +113,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         appState.isShowingSuggestions = !results.isEmpty
         if appState.isShowingSuggestions { showOverlayAfterLayout(below: anchorRect) }
         else {
+            appState.currentSuggestionQuery = ""
             currentSuggestionReplacesTrigger = false
             overlayPanel.hide()
         }
@@ -142,6 +144,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         appState.selectedSuggestionIndex = 0
         appState.visibleSuggestionStart = 0
         currentKeyword = ""
+        appState.currentSuggestionQuery = ""
         currentSuggestionReplacesTrigger = false
         overlayPanel.hide()
     }
@@ -297,9 +300,7 @@ class AppState: ObservableObject {
     @Published var inlineSuggestionLayout: InlineSuggestionLayout = AppSettings.shared.inlineSuggestionLayout {
         didSet { AppSettings.shared.inlineSuggestionLayout = inlineSuggestionLayout }
     }
-    @Published var inlineSuggestionScale: Double = AppSettings.shared.inlineSuggestionScale {
-        didSet { AppSettings.shared.inlineSuggestionScale = inlineSuggestionScale }
-    }
+    @Published var currentSuggestionQuery: String = ""
     @Published var selectedSuggestionIndex: Int = 0
     @Published var visibleSuggestionStart: Int = 0
     @Published var inlinePopupHeight: CGFloat = 62
@@ -313,7 +314,10 @@ class AppState: ObservableObject {
         numberShortcutEnabled = AppSettings.shared.numberShortcutEnabled
         inlinePanelOpenMode = AppSettings.shared.inlinePanelOpenMode
         inlineSuggestionLayout = AppSettings.shared.inlineSuggestionLayout
-        inlineSuggestionScale = AppSettings.shared.inlineSuggestionScale
+    }
+
+    var currentSuggestionLabel: String {
+        triggerCharacter + currentSuggestionQuery
     }
 }
 

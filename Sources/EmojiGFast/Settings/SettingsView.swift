@@ -213,10 +213,7 @@ private struct EmojiSettingsPane: View {
             SettingsSectionTitle("Inline Suggestions")
 
             SettingsGroup {
-                InlineSuggestionSettingsPreview(
-                    layout: appState.inlineSuggestionLayout,
-                    scale: appState.inlineSuggestionScale
-                )
+                InlineSuggestionSettingsPreview()
                 .padding(12)
 
                 SettingsDivider()
@@ -226,10 +223,6 @@ private struct EmojiSettingsPane: View {
                     selection: $appState.inlineSuggestionLayout,
                     options: InlineSuggestionLayout.allCases
                 )
-
-                SettingsDivider()
-
-                InlineScaleRow(scale: $appState.inlineSuggestionScale)
             }
 
             SettingsGroup {
@@ -380,61 +373,44 @@ private struct SettingsMenuRow<Option: Hashable & RawRepresentable>: View where 
     }
 }
 
-private struct InlineScaleRow: View {
-    @Binding var scale: Double
-
-    var body: some View {
-        VStack(spacing: 10) {
-            HStack {
-                Text("Scale")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundColor(.primary)
-
-                Spacer()
-
-                Text("\(Int((scale * 100).rounded()))%")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundColor(.primary.opacity(0.9))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(Color.secondary.opacity(0.10))
-                    )
-                    .overlay(
-                        Capsule(style: .continuous)
-                            .stroke(Color.white.opacity(0.14), lineWidth: 1)
-                    )
-            }
-
-            Slider(value: $scale, in: 0.75...1.25, step: 0.05)
-                .controlSize(.small)
-        }
-        .settingsCardRowPadding()
-    }
-}
-
 private struct InlineSuggestionSettingsPreview: View {
-    let layout: InlineSuggestionLayout
-    let scale: Double
+    @ObservedObject private var appState = AppState.shared
+
+    private let previewKeyword = "cat"
 
     private var previewEmojis: [Emoji] {
-        EmojiSearchEngine.shared.search(keyword: "grinning", maxResults: 6)
+        EmojiSearchEngine.shared.search(keyword: previewKeyword, maxResults: AppState.inlineVisibleCount)
+    }
+
+    private var previewEntries: [InlineSuggestionEntry] {
+        previewEmojis.enumerated().map { offset, emoji in
+            InlineSuggestionEntry(
+                absoluteIndex: offset,
+                item: SuggestionItem(
+                    emoji: emoji,
+                    shortcutIndex: appState.numberShortcutEnabled ? offset : nil
+                )
+            )
+        }
     }
 
     var body: some View {
         ZStack {
             previewBackground
 
-            InlineSuggestionPreviewPill(
-                emojis: previewEmojis,
-                layout: layout,
-                scale: scale
+            InlineSuggestionPillView(
+                entries: previewEntries,
+                selectedIndex: 0,
+                layout: appState.inlineSuggestionLayout,
+                label: appState.triggerCharacter + previewKeyword,
+                baseHeight: 54,
+                emojiHandler: { _ in }
             )
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 158)
+        .frame(height: 150)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .animation(.spring(response: 0.34, dampingFraction: 0.84, blendDuration: 0.08), value: appState.inlineSuggestionLayout)
     }
 
     private var previewBackground: some View {
@@ -465,69 +441,6 @@ private struct InlineSuggestionSettingsPreview: View {
                     .offset(x: -proxy.size.width * 0.12, y: proxy.size.height * 0.22)
             }
         }
-    }
-}
-
-private struct InlineSuggestionPreviewPill: View {
-    let emojis: [Emoji]
-    let layout: InlineSuggestionLayout
-    let scale: Double
-
-    private var itemScale: CGFloat {
-        CGFloat(scale)
-    }
-
-    private var selectedEmoji: Emoji? {
-        emojis.first
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 12 * itemScale) {
-                ForEach(emojis.prefix(6), id: \.character) { emoji in
-                    Text(emoji.character)
-                        .font(.system(size: 24 * itemScale))
-                        .frame(width: 32 * itemScale, height: 32 * itemScale)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.horizontal, 14 * itemScale)
-            .padding(.top, 10 * itemScale)
-            .padding(.bottom, layout == .descriptive ? 9 * itemScale : 10 * itemScale)
-
-            if layout == .descriptive {
-                Rectangle()
-                    .fill(Color.white.opacity(0.14))
-                    .frame(height: 1)
-                    .padding(.horizontal, 16 * itemScale)
-
-                Text(previewToken)
-                    .font(.system(size: 15 * itemScale, weight: .semibold, design: .rounded))
-                    .foregroundColor(.white.opacity(0.72))
-                    .lineLimit(1)
-                    .padding(.horizontal, 18 * itemScale)
-                    .padding(.vertical, 10 * itemScale)
-            }
-        }
-        .frame(width: layout == .descriptive ? 268 * itemScale : 238 * itemScale)
-        .background(
-            RoundedRectangle(cornerRadius: layout == .descriptive ? 28 * itemScale : 24 * itemScale, style: .continuous)
-                .fill(Color(red: 0.10, green: 0.32, blue: 0.88).opacity(0.72))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: layout == .descriptive ? 28 * itemScale : 24 * itemScale, style: .continuous)
-                .stroke(Color.white.opacity(0.20), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
-    }
-
-    private var previewToken: String {
-        guard let selectedEmoji else { return ":emoji:" }
-        let rawToken = selectedEmoji.keywords.first ?? selectedEmoji.name
-        let token = rawToken
-            .lowercased()
-            .replacingOccurrences(of: " ", with: "-")
-        return ":\(token):"
     }
 }
 
@@ -802,18 +715,32 @@ private struct EmojiUsageRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(stat.emoji.character)
-                .font(.system(size: 20))
-                .frame(width: 20)
+                .font(.system(size: 22))
+                .frame(width: 28)
 
-            RowText(title: displayName(for: stat.emoji), subtitle: stat.emoji.category)
+            Text(displayName(for: stat.emoji))
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundColor(.white.opacity(0.94))
+                .lineLimit(1)
 
             Spacer()
 
             Text("\(stat.count)")
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundColor(.secondary.opacity(0.7))
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundColor(.white.opacity(0.72))
         }
-        .settingsRowPadding()
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(emojiGradient(for: stat.emoji))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+        )
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
     }
 
     private func displayName(for emoji: Emoji) -> String {
@@ -821,6 +748,82 @@ private struct EmojiUsageRow: View {
             .split(separator: " ")
             .map { $0.prefix(1).uppercased() + $0.dropFirst() }
             .joined(separator: " ")
+    }
+
+    private func emojiGradient(for emoji: Emoji) -> LinearGradient {
+        let colors = emojiColors(for: emoji)
+        return LinearGradient(
+            colors: colors,
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+
+    private func emojiColors(for emoji: Emoji) -> [Color] {
+        let haystack = ([emoji.name, emoji.category] + emoji.keywords)
+            .joined(separator: " ")
+            .lowercased()
+
+        if haystack.contains("dog") || haystack.contains("cat") || haystack.contains("animal") {
+            return [
+                Color(red: 0.42, green: 0.25, blue: 0.12),
+                Color(red: 0.29, green: 0.18, blue: 0.10)
+            ]
+        }
+
+        if haystack.contains("heart") || haystack.contains("love") {
+            return [
+                Color(red: 0.55, green: 0.12, blue: 0.30),
+                Color(red: 0.32, green: 0.10, blue: 0.28)
+            ]
+        }
+
+        if haystack.contains("fire") || haystack.contains("hot") {
+            return [
+                Color(red: 0.66, green: 0.22, blue: 0.09),
+                Color(red: 0.42, green: 0.12, blue: 0.08)
+            ]
+        }
+
+        if haystack.contains("face") || haystack.contains("smile") || haystack.contains("joy") {
+            return [
+                Color(red: 0.68, green: 0.43, blue: 0.09),
+                Color(red: 0.42, green: 0.25, blue: 0.08)
+            ]
+        }
+
+        if haystack.contains("plant") || haystack.contains("tree") || haystack.contains("leaf") {
+            return [
+                Color(red: 0.12, green: 0.43, blue: 0.24),
+                Color(red: 0.08, green: 0.26, blue: 0.18)
+            ]
+        }
+
+        if haystack.contains("water") || haystack.contains("blue") || haystack.contains("sky") {
+            return [
+                Color(red: 0.10, green: 0.36, blue: 0.60),
+                Color(red: 0.06, green: 0.20, blue: 0.38)
+            ]
+        }
+
+        if haystack.contains("food") || haystack.contains("drink") {
+            return [
+                Color(red: 0.55, green: 0.28, blue: 0.10),
+                Color(red: 0.32, green: 0.16, blue: 0.08)
+            ]
+        }
+
+        if haystack.contains("symbol") || haystack.contains("star") || haystack.contains("spark") {
+            return [
+                Color(red: 0.34, green: 0.16, blue: 0.56),
+                Color(red: 0.16, green: 0.16, blue: 0.42)
+            ]
+        }
+
+        return [
+            Color(red: 0.30, green: 0.30, blue: 0.36),
+            Color(red: 0.18, green: 0.18, blue: 0.23)
+        ]
     }
 }
 

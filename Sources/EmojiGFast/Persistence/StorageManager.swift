@@ -43,7 +43,6 @@ struct AppSettingsData: Codable {
     var emojiBoardShortcut: ShortcutKey
     var inlinePanelOpenMode: InlinePanelOpenMode
     var inlineSuggestionLayout: InlineSuggestionLayout
-    var inlineSuggestionScale: Double
 
     init(
         triggerCharacter: String,
@@ -52,8 +51,7 @@ struct AppSettingsData: Codable {
         numberShortcutEnabled: Bool,
         emojiBoardShortcut: ShortcutKey,
         inlinePanelOpenMode: InlinePanelOpenMode = .recents,
-        inlineSuggestionLayout: InlineSuggestionLayout = .sleek,
-        inlineSuggestionScale: Double = 1.0
+        inlineSuggestionLayout: InlineSuggestionLayout = .sleek
     ) {
         self.triggerCharacter = triggerCharacter
         self.minTriggerLength = minTriggerLength
@@ -62,7 +60,6 @@ struct AppSettingsData: Codable {
         self.emojiBoardShortcut = emojiBoardShortcut
         self.inlinePanelOpenMode = inlinePanelOpenMode
         self.inlineSuggestionLayout = inlineSuggestionLayout
-        self.inlineSuggestionScale = inlineSuggestionScale
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -73,7 +70,6 @@ struct AppSettingsData: Codable {
         case emojiBoardShortcut
         case inlinePanelOpenMode
         case inlineSuggestionLayout
-        case inlineSuggestionScale
     }
 
     init(from decoder: Decoder) throws {
@@ -86,7 +82,6 @@ struct AppSettingsData: Codable {
             ?? ShortcutKey(keyCode: 0x00, modifiers: 0x0100)
         inlinePanelOpenMode = try container.decodeIfPresent(InlinePanelOpenMode.self, forKey: .inlinePanelOpenMode) ?? .recents
         inlineSuggestionLayout = try container.decodeIfPresent(InlineSuggestionLayout.self, forKey: .inlineSuggestionLayout) ?? .sleek
-        inlineSuggestionScale = try container.decodeIfPresent(Double.self, forKey: .inlineSuggestionScale) ?? 1.0
     }
 
     func encode(to encoder: Encoder) throws {
@@ -98,7 +93,6 @@ struct AppSettingsData: Codable {
         try container.encode(emojiBoardShortcut, forKey: .emojiBoardShortcut)
         try container.encode(inlinePanelOpenMode, forKey: .inlinePanelOpenMode)
         try container.encode(inlineSuggestionLayout, forKey: .inlineSuggestionLayout)
-        try container.encode(inlineSuggestionScale, forKey: .inlineSuggestionScale)
     }
 }
 
