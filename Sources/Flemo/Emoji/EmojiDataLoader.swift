@@ -10,6 +10,7 @@ struct Emoji: Codable {
 class EmojiDataLoader {
     static let shared = EmojiDataLoader()
     private(set) var allEmojis: [Emoji] = []
+    private var normalizedCache: [String: [Emoji]] = [:]
 
     private init() {
         if let loaded = Self.loadFromBundle() {
@@ -17,6 +18,13 @@ class EmojiDataLoader {
         } else {
             allEmojis = Self.fallbackEmojis()
         }
+    }
+
+    func preferredEmojis(skinTone: EmojiSkinTone) -> [Emoji] {
+        if let cached = normalizedCache[skinTone.rawValue] { return cached }
+        let normalized = EmojiSkinToneNormalizer.preferredEmojis(from: allEmojis, skinTone: skinTone)
+        normalizedCache[skinTone.rawValue] = normalized
+        return normalized
     }
 
     private static func loadFromBundle() -> [Emoji]? {

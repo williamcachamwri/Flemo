@@ -3,9 +3,12 @@ import SwiftUI
 
 struct EmojiBoardView: View {
     @ObservedObject private var appState = AppState.shared
+    @ObservedObject private var customization = EmojiCustomizationManager.shared
     @State private var searchText = ""
     @State private var selectedCategory = "All"
     @State private var hoveredEmoji: Emoji?
+    @State private var selectedEmoji: Emoji?
+    @State private var categoryCounts: [String: Int] = [:]
 
     var onSelect: (Emoji) -> Void
 
@@ -17,6 +20,7 @@ struct EmojiBoardView: View {
         let available = Set(displayEmojis.map { $0.category })
         let preferred = [
             "All",
+            "Favorites",
             "Smileys & Emotion",
             "People & Body",
             "Animals & Nature",
@@ -28,20 +32,21 @@ struct EmojiBoardView: View {
             "Flags"
         ]
         let extra = available.subtracting(preferred).sorted()
-        return preferred.filter { $0 == "All" || available.contains($0) } + extra
+        return preferred.filter { $0 == "All" || $0 == "Favorites" || available.contains($0) } + extra
     }
 
     private var displayEmojis: [Emoji] {
-        EmojiSkinToneNormalizer.preferredEmojis(
-            from: EmojiDataLoader.shared.allEmojis,
-            skinTone: appState.preferredSkinTone
-        )
+        EmojiDataLoader.shared.preferredEmojis(skinTone: appState.preferredSkinTone)
     }
 
     private var filteredEmojis: [Emoji] {
         let keyword = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !keyword.isEmpty {
             return EmojiSearchEngine.shared.search(keyword: keyword, maxResults: 700)
+        }
+
+        if selectedCategory == "Favorites" {
+            return displayEmojis.filter { customization.isFavorite($0.character) }
         }
 
         if selectedCategory == "All" {
@@ -79,6 +84,17 @@ struct EmojiBoardView: View {
             }
         }
         .frame(width: 620, height: 520)
+        .onAppear { rebuildCounts() }
+        .onChange(of: appState.preferredSkinTone) { _, _ in rebuildCounts() }
+    }
+
+    private func rebuildCounts() {
+        let emojis = EmojiDataLoader.shared.preferredEmojis(skinTone: appState.preferredSkinTone)
+        var counts: [String: Int] = ["All": emojis.count]
+        for emoji in emojis {
+            counts[emoji.category, default: 0] += 1
+        }
+        categoryCounts = counts
     }
 
     private var sidebar: some View {
@@ -127,7 +143,25 @@ struct EmojiBoardView: View {
     }
 
     private var content: some View {
-        VStack(spacing: 0) {
+        Group {
+            if let selected = selectedEmoji {
+                EmojiDetailView(
+                    emoji: selected,
+                    onUse: { onSelect(selected) },
+                    onBack: {
+                        withAnimation(.easeInOut(duration: 0.2)) { selectedEmoji = nil }
+                    }
+                )
+                .transition(.opacity)
+            } else {
+                gridContent
+            }
+        }
+    }
+
+    private var gridContent: some View {
+        let results = filteredEmojis
+        return VStack(spacing: 0) {
             HStack(spacing: 10) {
                 SearchField(text: $searchText)
 
@@ -155,7 +189,7 @@ struct EmojiBoardView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(searchText.isEmpty ? selectedCategory : "Search Results")
                         .font(.system(size: 15, weight: .bold, design: .rounded))
-                    Text("\(filteredEmojis.count) emoji")
+                    Text("\(results.count) emoji")
                         .font(.system(size: 11, weight: .regular, design: .rounded))
                         .foregroundColor(.secondary.opacity(0.7))
                 }
@@ -175,12 +209,15 @@ struct EmojiBoardView: View {
 
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 6) {
-                    ForEach(filteredEmojis) { emoji in
+                    ForEach(results) { emoji in
                         EmojiCell(
                             emoji: emoji,
-                            isHovered: hoveredEmoji?.character == emoji.character
+                            isHovered: hoveredEmoji?.character == emoji.character,
+                            isFavorite: customization.isFavorite(emoji.character)
                         ) {
-                            onSelect(emoji)
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedEmoji = emoji
+                            }
                         }
                         .onHover { hovering in
                             hoveredEmoji = hovering ? emoji : (hoveredEmoji?.character == emoji.character ? nil : hoveredEmoji)
@@ -194,10 +231,10 @@ struct EmojiBoardView: View {
     }
 
     private func count(for category: String) -> Int {
-        if category == "All" {
-            return displayEmojis.count
+        if category == "Favorites" {
+            return displayEmojis.filter { customization.isFavorite($0.character) }.count
         }
-        return displayEmojis.filter { $0.category == category }.count
+        return categoryCounts[category] ?? 0
     }
 
     private func shortTitle(for category: String) -> String {
@@ -214,6 +251,7 @@ struct EmojiBoardView: View {
     private func icon(for category: String) -> String {
         switch category {
         case "All": return "sparkles"
+        case "Favorites": return "star.fill"
         case "Smileys & Emotion": return "face.smiling"
         case "People & Body": return "figure.wave"
         case "Animals & Nature": return "leaf"
@@ -309,6 +347,7 @@ private struct CategoryNavItem: View {
 private struct EmojiCell: View {
     let emoji: Emoji
     let isHovered: Bool
+    let isFavorite: Bool
     let action: () -> Void
 
     var body: some View {
@@ -324,6 +363,14 @@ private struct EmojiCell: View {
                     RoundedRectangle(cornerRadius: 9, style: .continuous)
                         .stroke(Color.white.opacity(isHovered ? 0.16 : 0.04), lineWidth: 1)
                 )
+                .overlay(alignment: .topTrailing) {
+                    if isFavorite {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 7, weight: .bold))
+                            .foregroundColor(.yellow)
+                            .padding(3)
+                    }
+                }
         }
         .buttonStyle(.plain)
         .help(emoji.name)

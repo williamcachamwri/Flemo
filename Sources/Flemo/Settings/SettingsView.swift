@@ -987,6 +987,25 @@ private struct AboutSettingsPane: View {
             MetricRow(icon: "tag", title: "Version", value: versionString)
             MetricRow(icon: "face.smiling", title: "Emoji Library", value: "\(EmojiDataLoader.shared.allEmojis.count)")
             MetricRow(icon: "shippingbox", title: "Bundle", value: bundleIdentifier)
+
+            Button {
+                if let url = URL(string: "https://github.com/williamcachamwri/Flemo") {
+                    NSWorkspace.shared.open(url)
+                }
+            } label: {
+                ValueRow(icon: "chevron.left.forwardslash.chevron.right", title: "GitHub", subtitle: "") {
+                    HStack(spacing: 4) {
+                        Text("williamcachamwri/Flemo")
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundColor(.secondary.opacity(0.7))
+                            .lineLimit(1)
+                        Image(systemName: "arrow.up.right.square.fill")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.secondary.opacity(0.6))
+                    }
+                }
+            }
+            .buttonStyle(.plain)
         }
     }
 

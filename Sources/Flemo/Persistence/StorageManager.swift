@@ -7,6 +7,8 @@ class StorageManager {
 
     private let frequencyKey = "emoji_frequency"
     private let settingsKey = "app_settings"
+    private let customAliasesKey = "emoji_custom_aliases"
+    private let favoritesKey = "emoji_favorites"
 
     func loadFrequencyData() -> [String: Int] {
         guard let data = defaults.data(forKey: frequencyKey),
@@ -32,6 +34,27 @@ class StorageManager {
     func saveSettings(_ settings: AppSettingsData) {
         guard let encoded = try? JSONEncoder().encode(settings) else { return }
         defaults.set(encoded, forKey: settingsKey)
+    }
+
+    func loadCustomAliases() -> [String: [String]] {
+        guard let data = defaults.data(forKey: customAliasesKey),
+              let dict = try? JSONDecoder().decode([String: [String]].self, from: data) else {
+            return [:]
+        }
+        return dict
+    }
+
+    func saveCustomAliases(_ data: [String: [String]]) {
+        guard let encoded = try? JSONEncoder().encode(data) else { return }
+        defaults.set(encoded, forKey: customAliasesKey)
+    }
+
+    func loadFavorites() -> [String] {
+        defaults.stringArray(forKey: favoritesKey) ?? []
+    }
+
+    func saveFavorites(_ data: [String]) {
+        defaults.set(data, forKey: favoritesKey)
     }
 }
 

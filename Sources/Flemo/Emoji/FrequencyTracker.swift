@@ -37,6 +37,10 @@ class FrequencyTracker {
         return min(count * 3, 50)
     }
 
+    func usageCount(for character: String) -> Int {
+        cache[character] ?? 0
+    }
+
     func topEmojiCharacters(limit: Int) -> [String] {
         cache.sorted { $0.value > $1.value }.prefix(limit).map { $0.key }
     }

@@ -57,10 +57,15 @@ struct EmojiSkinToneNormalizer {
     }
 
     static func baseKey(for character: String) -> String {
-        modifiers.reduce(character) { partialResult, modifier in
+        if let cached = baseKeyCache[character] { return cached }
+        let key = modifiers.reduce(character) { partialResult, modifier in
             partialResult.replacingOccurrences(of: modifier, with: "")
         }
+        baseKeyCache[character] = key
+        return key
     }
+
+    private static var baseKeyCache: [String: String] = [:]
 
     private static func preferredEmoji(from group: [Emoji], skinTone: EmojiSkinTone) -> Emoji? {
         group.first { matches($0.character, skinTone: skinTone) }
