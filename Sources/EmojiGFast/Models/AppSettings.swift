@@ -30,6 +30,24 @@ class AppSettings {
         set { current.emojiBoardShortcut = newValue; persist() }
     }
 
+    var inlinePanelOpenMode: InlinePanelOpenMode {
+        get { current.inlinePanelOpenMode }
+        set { current.inlinePanelOpenMode = newValue; persist() }
+    }
+
+    var inlineSuggestionLayout: InlineSuggestionLayout {
+        get { current.inlineSuggestionLayout }
+        set { current.inlineSuggestionLayout = newValue; persist() }
+    }
+
+    var inlineSuggestionScale: Double {
+        get { current.inlineSuggestionScale }
+        set {
+            current.inlineSuggestionScale = min(max(newValue, 0.75), 1.25)
+            persist()
+        }
+    }
+
     private var current: AppSettingsData
 
     private init() {
@@ -41,7 +59,10 @@ class AppSettings {
                 minTriggerLength: 2,
                 inlineTriggerEnabled: true,
                 numberShortcutEnabled: true,
-                emojiBoardShortcut: ShortcutKey(keyCode: 0x00, modifiers: 0x0100)
+                emojiBoardShortcut: ShortcutKey(keyCode: 0x00, modifiers: 0x0100),
+                inlinePanelOpenMode: .recents,
+                inlineSuggestionLayout: .sleek,
+                inlineSuggestionScale: 1.0
             )
         }
     }
@@ -56,7 +77,10 @@ class AppSettings {
             minTriggerLength: 2,
             inlineTriggerEnabled: true,
             numberShortcutEnabled: true,
-            emojiBoardShortcut: ShortcutKey(keyCode: 0x00, modifiers: 0x0100)
+            emojiBoardShortcut: ShortcutKey(keyCode: 0x00, modifiers: 0x0100),
+            inlinePanelOpenMode: .recents,
+            inlineSuggestionLayout: .sleek,
+            inlineSuggestionScale: 1.0
         )
         persist()
     }

@@ -11,6 +11,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: NSWindow?
     private var emojiBoardWindow: NSWindow?
     private var currentKeyword = ""
+    private var currentSuggestionReplacesTrigger = false
     private let log = OSLog(subsystem: "com.emoji-g-fast", category: "AppDelegate")
 
     let appState = AppState.shared
@@ -94,6 +95,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         os_log(.info, "Show suggestions: '%{public}s'", keyword)
         let isSameKeyword = appState.isShowingSuggestions && currentKeyword == keyword
         currentKeyword = keyword
+        currentSuggestionReplacesTrigger = true
         appState.inlinePopupHeight = popupHeight(for: anchorRect)
         let results = EmojiSearchEngine.shared.search(keyword: keyword, maxResults: 10)
         if !isSameKeyword || appState.suggestions.isEmpty {
@@ -109,7 +111,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         appState.isShowingSuggestions = !results.isEmpty
         if appState.isShowingSuggestions { showOverlayAfterLayout(below: anchorRect) }
-        else { overlayPanel.hide() }
+        else {
+            currentSuggestionReplacesTrigger = false
+            overlayPanel.hide()
+        }
     }
 
     private func popupHeight(for anchorRect: CGRect) -> CGFloat {
@@ -137,6 +142,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         appState.selectedSuggestionIndex = 0
         appState.visibleSuggestionStart = 0
         currentKeyword = ""
+        currentSuggestionReplacesTrigger = false
         overlayPanel.hide()
     }
 
@@ -180,7 +186,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func handleEmojiSelected(_ emoji: Emoji) {
         FrequencyTracker.shared.recordUsage(emoji: emoji)
         let k = currentKeyword
-        if !k.isEmpty {
+        if currentSuggestionReplacesTrigger || appState.isShowingSuggestions {
             TextInsertionHelper.shared.replaceTriggerText(
                 triggerChar: appState.triggerCharacter, keyword: k, with: emoji.character)
         } else {
@@ -285,6 +291,15 @@ class AppState: ObservableObject {
     @Published var numberShortcutEnabled: Bool = AppSettings.shared.numberShortcutEnabled {
         didSet { AppSettings.shared.numberShortcutEnabled = numberShortcutEnabled }
     }
+    @Published var inlinePanelOpenMode: InlinePanelOpenMode = AppSettings.shared.inlinePanelOpenMode {
+        didSet { AppSettings.shared.inlinePanelOpenMode = inlinePanelOpenMode }
+    }
+    @Published var inlineSuggestionLayout: InlineSuggestionLayout = AppSettings.shared.inlineSuggestionLayout {
+        didSet { AppSettings.shared.inlineSuggestionLayout = inlineSuggestionLayout }
+    }
+    @Published var inlineSuggestionScale: Double = AppSettings.shared.inlineSuggestionScale {
+        didSet { AppSettings.shared.inlineSuggestionScale = inlineSuggestionScale }
+    }
     @Published var selectedSuggestionIndex: Int = 0
     @Published var visibleSuggestionStart: Int = 0
     @Published var inlinePopupHeight: CGFloat = 62
@@ -296,6 +311,9 @@ class AppState: ObservableObject {
         minTriggerLength = AppSettings.shared.minTriggerLength
         inlineTriggerEnabled = AppSettings.shared.inlineTriggerEnabled
         numberShortcutEnabled = AppSettings.shared.numberShortcutEnabled
+        inlinePanelOpenMode = AppSettings.shared.inlinePanelOpenMode
+        inlineSuggestionLayout = AppSettings.shared.inlineSuggestionLayout
+        inlineSuggestionScale = AppSettings.shared.inlineSuggestionScale
     }
 }
 

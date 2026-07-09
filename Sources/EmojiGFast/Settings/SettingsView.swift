@@ -197,38 +197,69 @@ private struct EmojiSettingsPane: View {
     @ObservedObject private var appState = AppState.shared
 
     var body: some View {
-        VStack(spacing: 0) {
-            ToggleRow(
-                icon: "text.bubble",
-                title: "Inline Suggestions",
-                subtitle: "Show suggestions while typing a keyword",
-                isOn: $appState.inlineTriggerEnabled
-            )
+        VStack(alignment: .leading, spacing: 14) {
+            SettingsGroup {
+                PlainToggleRow(title: "Emojis", isOn: $appState.inlineTriggerEnabled)
 
-            Divider().background(Color.white.opacity(0.06))
+                SettingsDivider()
 
-            ValueRow(icon: "quote.opening", title: "Trigger Character", subtitle: "The prefix before a keyword") {
-                TextField("", text: triggerBinding)
-                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                    .multilineTextAlignment(.center)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 46)
+                SettingsMenuRow(
+                    title: "Inline panel opens with",
+                    selection: $appState.inlinePanelOpenMode,
+                    options: InlinePanelOpenMode.allCases
+                )
             }
 
-            StepperRow(
-                icon: "textformat.123",
-                title: "Minimum Keyword",
-                subtitle: "Characters required before suggestions appear",
-                value: $appState.minTriggerLength,
-                range: 1...5
-            )
+            SettingsSectionTitle("Inline Suggestions")
 
-            ToggleRow(
-                icon: "command",
-                title: "Command-number Selection",
-                subtitle: "Use Command + 0-9 to choose suggestions",
-                isOn: $appState.numberShortcutEnabled
-            )
+            SettingsGroup {
+                InlineSuggestionSettingsPreview(
+                    layout: appState.inlineSuggestionLayout,
+                    scale: appState.inlineSuggestionScale
+                )
+                .padding(12)
+
+                SettingsDivider()
+
+                SettingsMenuRow(
+                    title: "Layout",
+                    selection: $appState.inlineSuggestionLayout,
+                    options: InlineSuggestionLayout.allCases
+                )
+
+                SettingsDivider()
+
+                InlineScaleRow(scale: $appState.inlineSuggestionScale)
+            }
+
+            SettingsGroup {
+                ValueRow(icon: "quote.opening", title: "Trigger Character", subtitle: "The prefix before a keyword") {
+                    TextField("", text: triggerBinding)
+                        .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                        .multilineTextAlignment(.center)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 46)
+                }
+
+                SettingsDivider()
+
+                StepperRow(
+                    icon: "textformat.123",
+                    title: "Minimum Keyword",
+                    subtitle: "Characters required before search suggestions",
+                    value: $appState.minTriggerLength,
+                    range: 1...5
+                )
+
+                SettingsDivider()
+
+                ToggleRow(
+                    icon: "command",
+                    title: "Command-number Selection",
+                    subtitle: "Use Command + 0-9 to choose suggestions",
+                    isOn: $appState.numberShortcutEnabled
+                )
+            }
         }
     }
 
@@ -242,6 +273,261 @@ private struct EmojiSettingsPane: View {
                     : String(cleaned.prefix(1))
             }
         )
+    }
+}
+
+private struct SettingsSectionTitle: View {
+    let title: String
+
+    init(_ title: String) {
+        self.title = title
+    }
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 14, weight: .bold, design: .rounded))
+            .foregroundColor(.primary.opacity(0.92))
+            .padding(.top, 2)
+            .padding(.leading, 2)
+    }
+}
+
+private struct SettingsGroup<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            content
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.black.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.white.opacity(0.16), lineWidth: 1)
+        )
+    }
+}
+
+private struct SettingsDivider: View {
+    var body: some View {
+        Divider()
+            .background(Color.white.opacity(0.08))
+    }
+}
+
+private struct PlainToggleRow: View {
+    let title: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundColor(.primary)
+
+            Spacer()
+
+            Toggle("", isOn: $isOn)
+                .toggleStyle(SwitchToggleStyle(tint: .accentColor))
+                .labelsHidden()
+                .controlSize(.small)
+        }
+        .settingsCardRowPadding()
+    }
+}
+
+private struct SettingsMenuRow<Option: Hashable & RawRepresentable>: View where Option.RawValue == String {
+    let title: String
+    @Binding var selection: Option
+    let options: [Option]
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundColor(.primary)
+
+            Spacer()
+
+            Menu {
+                ForEach(options, id: \.self) { option in
+                    Button(option.rawValue) {
+                        selection = option
+                    }
+                }
+            } label: {
+                HStack(spacing: 7) {
+                    Text(selection.rawValue)
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.secondary)
+                }
+                .foregroundColor(.primary.opacity(0.92))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(Color.secondary.opacity(0.12))
+                )
+            }
+            .buttonStyle(.plain)
+        }
+        .settingsCardRowPadding()
+    }
+}
+
+private struct InlineScaleRow: View {
+    @Binding var scale: Double
+
+    var body: some View {
+        VStack(spacing: 10) {
+            HStack {
+                Text("Scale")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
+
+                Spacer()
+
+                Text("\(Int((scale * 100).rounded()))%")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary.opacity(0.9))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color.secondary.opacity(0.10))
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                    )
+            }
+
+            Slider(value: $scale, in: 0.75...1.25, step: 0.05)
+                .controlSize(.small)
+        }
+        .settingsCardRowPadding()
+    }
+}
+
+private struct InlineSuggestionSettingsPreview: View {
+    let layout: InlineSuggestionLayout
+    let scale: Double
+
+    private var previewEmojis: [Emoji] {
+        EmojiSearchEngine.shared.search(keyword: "grinning", maxResults: 6)
+    }
+
+    var body: some View {
+        ZStack {
+            previewBackground
+
+            InlineSuggestionPreviewPill(
+                emojis: previewEmojis,
+                layout: layout,
+                scale: scale
+            )
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 158)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var previewBackground: some View {
+        GeometryReader { proxy in
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.31, green: 0.13, blue: 0.95),
+                        Color(red: 0.03, green: 0.27, blue: 0.88),
+                        Color(red: 0.02, green: 0.06, blue: 0.24)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+
+                Ellipse()
+                    .fill(Color.white.opacity(0.20))
+                    .frame(width: proxy.size.width * 0.9, height: proxy.size.height * 0.38)
+                    .rotationEffect(.degrees(-22))
+                    .blur(radius: 8)
+                    .offset(x: proxy.size.width * 0.12, y: -proxy.size.height * 0.08)
+
+                Ellipse()
+                    .fill(Color.black.opacity(0.20))
+                    .frame(width: proxy.size.width * 1.1, height: proxy.size.height * 0.36)
+                    .rotationEffect(.degrees(-16))
+                    .blur(radius: 7)
+                    .offset(x: -proxy.size.width * 0.12, y: proxy.size.height * 0.22)
+            }
+        }
+    }
+}
+
+private struct InlineSuggestionPreviewPill: View {
+    let emojis: [Emoji]
+    let layout: InlineSuggestionLayout
+    let scale: Double
+
+    private var itemScale: CGFloat {
+        CGFloat(scale)
+    }
+
+    private var selectedEmoji: Emoji? {
+        emojis.first
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 12 * itemScale) {
+                ForEach(emojis.prefix(6), id: \.character) { emoji in
+                    Text(emoji.character)
+                        .font(.system(size: 24 * itemScale))
+                        .frame(width: 32 * itemScale, height: 32 * itemScale)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.horizontal, 14 * itemScale)
+            .padding(.top, 10 * itemScale)
+            .padding(.bottom, layout == .descriptive ? 9 * itemScale : 10 * itemScale)
+
+            if layout == .descriptive {
+                Rectangle()
+                    .fill(Color.white.opacity(0.14))
+                    .frame(height: 1)
+                    .padding(.horizontal, 16 * itemScale)
+
+                Text(previewToken)
+                    .font(.system(size: 15 * itemScale, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white.opacity(0.72))
+                    .lineLimit(1)
+                    .padding(.horizontal, 18 * itemScale)
+                    .padding(.vertical, 10 * itemScale)
+            }
+        }
+        .frame(width: layout == .descriptive ? 268 * itemScale : 238 * itemScale)
+        .background(
+            RoundedRectangle(cornerRadius: layout == .descriptive ? 28 * itemScale : 24 * itemScale, style: .continuous)
+                .fill(Color(red: 0.10, green: 0.32, blue: 0.88).opacity(0.72))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: layout == .descriptive ? 28 * itemScale : 24 * itemScale, style: .continuous)
+                .stroke(Color.white.opacity(0.20), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
+    }
+
+    private var previewToken: String {
+        guard let selectedEmoji else { return ":emoji:" }
+        let rawToken = selectedEmoji.keywords.first ?? selectedEmoji.name
+        let token = rawToken
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "-")
+        return ":\(token):"
     }
 }
 
@@ -608,5 +894,10 @@ private extension View {
     func settingsRowPadding() -> some View {
         padding(.vertical, 10)
             .padding(.horizontal, 2)
+    }
+
+    func settingsCardRowPadding() -> some View {
+        padding(.vertical, 12)
+            .padding(.horizontal, 14)
     }
 }

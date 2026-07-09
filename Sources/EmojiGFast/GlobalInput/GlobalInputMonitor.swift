@@ -12,6 +12,7 @@ class GlobalInputMonitor: NSObject {
     private var isTriggered = false
     private var eventBuffer = ""
     private var lastDetectedKeyword = ""
+    private var hasDetectedTrigger = false
     private var lastFireTime: Date = .distantPast
     private var lastKeyEventTime: Date = .distantPast
     private var pendingCancelWorkItem: DispatchWorkItem?
@@ -58,6 +59,7 @@ class GlobalInputMonitor: NSObject {
         isTriggered = false
         eventBuffer = ""
         lastDetectedKeyword = ""
+        hasDetectedTrigger = false
         lastFireTime = .distantPast
     }
 
@@ -160,6 +162,7 @@ class GlobalInputMonitor: NSObject {
 
         let trigger = appState.triggerCharacter
         let minLen = appState.minTriggerLength
+        let opensRecents = appState.inlinePanelOpenMode == .recents
 
         if appState.isShowingSuggestions {
             switch event.keyCode {
@@ -190,8 +193,12 @@ class GlobalInputMonitor: NSObject {
             isTriggered = true
             eventBuffer = ""
             lastDetectedKeyword = ""
+            hasDetectedTrigger = false
             pendingCancelWorkItem?.cancel()
             os_log(.info, "Trigger detected via event")
+            if opensRecents {
+                fireEvent(keyword: "")
+            }
             return false
         }
         if !isTriggered { return false }
@@ -204,6 +211,8 @@ class GlobalInputMonitor: NSObject {
                 eventBuffer.removeLast()
                 if eventBuffer.count >= minLen {
                     fireEvent(keyword: eventBuffer)
+                } else if eventBuffer.isEmpty, opensRecents {
+                    fireEvent(keyword: "")
                 } else {
                     cancelSuggestions()
                 }
@@ -222,7 +231,11 @@ class GlobalInputMonitor: NSObject {
             isTriggered = true
             eventBuffer = ""
             lastDetectedKeyword = ""
+            hasDetectedTrigger = false
             pendingCancelWorkItem?.cancel()
+            if opensRecents {
+                fireEvent(keyword: "")
+            }
             return false
         }
 
@@ -235,6 +248,8 @@ class GlobalInputMonitor: NSObject {
             pendingCancelWorkItem?.cancel()
             if eventBuffer.count >= minLen {
                 fireEvent(keyword: eventBuffer)
+            } else {
+                cancelSuggestions()
             }
         }
         return false
@@ -253,9 +268,11 @@ class GlobalInputMonitor: NSObject {
 
     private func fireEvent(keyword: String) {
         let rangeLength = (appState.triggerCharacter + keyword).utf16.count
+        let expectedBuffer = eventBuffer
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) { [weak self] in
             guard let self, self.isTriggered else { return }
+            guard self.eventBuffer == expectedBuffer else { return }
             guard let anchorRect = self.textProvider.bestAnchorBoundsBeforeCursor(length: rangeLength) else {
                 os_log(.error, log: self.log, "No usable anchor; suppressing popup")
                 return
@@ -268,6 +285,7 @@ class GlobalInputMonitor: NSObject {
         pendingCancelWorkItem?.cancel()
         pendingCancelWorkItem = nil
         lastDetectedKeyword = ""
+        hasDetectedTrigger = false
         lastFireTime = .distantPast
         DispatchQueue.main.async { [weak self] in
             self?.onTriggerCancelled?()
@@ -299,9 +317,15 @@ class GlobalInputMonitor: NSObject {
 
         let trigger = appState.triggerCharacter
         let minLen = appState.minTriggerLength
+        let allowEmpty = appState.inlinePanelOpenMode == .recents
 
-        guard let keyword = detectTrigger(in: ctx.textBeforeCursor, triggerChar: trigger, minLength: minLen) else {
-            if !lastDetectedKeyword.isEmpty {
+        guard let keyword = detectTrigger(
+            in: ctx.textBeforeCursor,
+            triggerChar: trigger,
+            minLength: minLen,
+            allowEmpty: allowEmpty
+        ) else {
+            if hasDetectedTrigger || appState.isShowingSuggestions {
                 schedulePollingCancel()
             }
             return
@@ -315,11 +339,19 @@ class GlobalInputMonitor: NSObject {
 
     // MARK: — Trigger detection + dedup
 
-    private func detectTrigger(in text: String, triggerChar: String, minLength: Int) -> String? {
+    private func detectTrigger(
+        in text: String,
+        triggerChar: String,
+        minLength: Int,
+        allowEmpty: Bool
+    ) -> String? {
         let nsText = text as NSString
         let range = nsText.range(of: triggerChar, options: .backwards)
         guard range.location != NSNotFound else { return nil }
         let afterStart = range.location + range.length
+        if afterStart == nsText.length {
+            return allowEmpty ? "" : nil
+        }
         guard afterStart < nsText.length else { return nil }
         let after = nsText.substring(from: afterStart)
         guard !after.isEmpty, after.count >= minLength else { return nil }
@@ -328,13 +360,13 @@ class GlobalInputMonitor: NSObject {
     }
 
     private func fireIfNew(keyword: String, at anchorRect: CGRect) {
-        if appState.isShowingSuggestions && keyword == lastDetectedKeyword {
+        if appState.isShowingSuggestions && hasDetectedTrigger && keyword == lastDetectedKeyword {
             DispatchQueue.main.async { [weak self] in
                 self?.onTriggerDetected?(keyword, anchorRect)
             }
             return
         }
-        if keyword == lastDetectedKeyword {
+        if hasDetectedTrigger && keyword == lastDetectedKeyword {
             DispatchQueue.main.async { [weak self] in
                 self?.onTriggerDetected?(keyword, anchorRect)
             }
@@ -342,6 +374,7 @@ class GlobalInputMonitor: NSObject {
         }
         os_log(.info, "FIRE: keyword='%{public}s'", keyword)
         lastDetectedKeyword = keyword
+        hasDetectedTrigger = true
         lastFireTime = Date()
         DispatchQueue.main.async { [weak self] in
             self?.onTriggerDetected?(keyword, anchorRect)
@@ -361,6 +394,7 @@ class GlobalInputMonitor: NSObject {
         isTriggered = false
         eventBuffer = ""
         lastDetectedKeyword = ""
+        hasDetectedTrigger = false
         pendingCancelWorkItem?.cancel()
         isMonitoring = false
     }
