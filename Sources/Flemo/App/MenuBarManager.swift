@@ -26,6 +26,7 @@ class MenuBarManager {
         menu.addItem(item("Emoji Board", action: #selector(AppDelegate.toggleEmojiBoard), key: "e"))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(item("Welcome / Onboarding", action: #selector(AppDelegate.showOnboarding)))
+        menu.addItem(item("Check for Updates...", action: #selector(AppDelegate.checkForUpdates)))
         menu.addItem(item("Check Permissions", action: #selector(AppDelegate.checkPermissions)))
         menu.addItem(item("Request Permissions", action: #selector(AppDelegate.requestPermissions)))
         menu.addItem(item("Settings...", action: #selector(AppDelegate.openSettings), key: ","))

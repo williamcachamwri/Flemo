@@ -1,0 +1,64 @@
+name: Build Flemo
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build macOS app
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          swift --version
+          xcodebuild -version
+
+      - name: Lint app metadata
+        run: |
+          plutil -lint Info.plist
+          bash -n build-app.sh
+
+      - name: Build debug app
+        env:
+          BUILD_CONFIGURATION: debug
+          INSTALL_APP: "0"
+          SIGN_IDENTITY: "-"
+          FLEMO_DEBUG_APPCAST_URL: ${{ vars.FLEMO_DEBUG_APPCAST_URL }}
+          FLEMO_DEBUG_SPARKLE_PUBLIC_KEY: ${{ secrets.FLEMO_DEBUG_SPARKLE_PUBLIC_KEY }}
+        run: ./build-app.sh
+
+      - name: Archive debug app
+        run: |
+          mkdir -p artifacts
+          ditto -c -k --keepParent ".build/Flemo Debug.app" "artifacts/Flemo-Debug-${GITHUB_SHA}.zip"
+
+      - name: Build release app
+        env:
+          BUILD_CONFIGURATION: release
+          INSTALL_APP: "0"
+          SIGN_IDENTITY: "-"
+          FLEMO_RELEASE_APPCAST_URL: ${{ vars.FLEMO_RELEASE_APPCAST_URL }}
+          FLEMO_RELEASE_SPARKLE_PUBLIC_KEY: ${{ secrets.FLEMO_RELEASE_SPARKLE_PUBLIC_KEY }}
+        run: ./build-app.sh
+
+      - name: Archive release app
+        run: |
+          mkdir -p artifacts
+          ditto -c -k --keepParent ".build/Flemo.app" "artifacts/Flemo-Release-${GITHUB_SHA}.zip"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: flemo-macos-apps
+          path: artifacts/*.zip
+          if-no-files-found: error

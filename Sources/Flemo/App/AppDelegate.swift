@@ -7,6 +7,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var globalInputMonitor: GlobalInputMonitor!
     private var overlayPanel: OverlayPanel!
     private var shortcutMonitor: ShortcutSelectionMonitor!
+    private var updateController: SparkleUpdateController!
     private var onboardingWindow: NSWindow?
     private var settingsWindow: NSWindow?
     private var emojiBoardWindow: NSWindow?
@@ -30,6 +31,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             menuBarManager = MenuBarManager(appDelegate: self)
+            updateController = SparkleUpdateController()
 
             let overlayContent = SuggestionPopupView(appState: appState) { [weak self] emoji in
                 self?.handleEmojiSelected(emoji)
@@ -292,6 +294,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             pm.requestInputMonitoring()
             self.globalInputMonitor.refreshPermissionsAndRetry()
         }
+    }
+
+    @objc func checkForUpdates() {
+        updateController.checkForUpdates()
     }
 
     @objc func quit() { NSApplication.shared.terminate(nil) }

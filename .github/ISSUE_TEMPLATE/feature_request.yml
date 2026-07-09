@@ -1,0 +1,44 @@
+name: Feature request
+description: Suggest a Flemo improvement.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Inline suggestions
+        - Emoji board
+        - Settings
+        - Rules
+        - Sparkle updates
+        - Build / CI
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is hard, slow, confusing, or missing today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like Flemo to do?
+    validations:
+      required: true
+  - type: dropdown
+    id: channel
+    attributes:
+      label: Should this be tested in Debug first?
+      options:
+        - Yes, ship through Debug first
+        - No, Release is fine
+        - Not sure
+    validations:
+      required: true

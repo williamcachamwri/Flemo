@@ -1,0 +1,78 @@
+name: Bug report
+description: Report a crash, broken shortcut, bad insertion, or update problem.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: dropdown
+    id: channel
+    attributes:
+      label: App channel
+      description: Debug and Release use different bundle IDs and Sparkle feeds.
+      options:
+        - Release (com.flemo.app)
+        - Debug (com.flemo.debug)
+        - Unsure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / build
+      description: Open Settings > About and copy the version/build if possible.
+      placeholder: "1.1.0 (2)"
+    validations:
+      required: false
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "macOS 15.5"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Inline suggestions
+        - Emoji board
+        - Settings
+        - Permissions
+        - Sparkle updates
+        - Build / packaging
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Tell us exactly what you did before the issue happened.
+      placeholder: |
+        1. Open Flemo from the menu bar
+        2. Click Settings...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include screenshots or crash report snippets if helpful.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or crash report
+      description: Paste relevant output from Console.app or DiagnosticReports.
+      render: shell
+    validations:
+      required: false
