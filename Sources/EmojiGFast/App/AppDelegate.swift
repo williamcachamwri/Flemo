@@ -69,26 +69,44 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let hasSeen = UserDefaults.standard.bool(forKey: "hasSeenOnboarding")
         guard !hasSeen else { return }
 
-        let hosting = NSHostingController(rootView: OnboardingView())
-        let w = NSWindow(contentViewController: hosting)
-        w.title = "Welcome"
-        w.styleMask = [.titled, .closable]
-        w.setContentSize(NSSize(width: 480, height: 520))
-        w.makeKeyAndOrderFront(nil)
-        w.center()
+        let w = makeOnboardingWindow()
+        w.makeKeyAndOrderFront(nil); w.center()
         onboardingWindow = w
 
         UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
     }
 
     @objc func showOnboarding() {
-        let hosting = NSHostingController(rootView: OnboardingView())
-        let w = NSWindow(contentViewController: hosting)
-        w.title = "Welcome"
-        w.styleMask = [.titled, .closable]
-        w.setContentSize(NSSize(width: 480, height: 520))
-        w.makeKeyAndOrderFront(nil)
-        w.center()
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        if let w = onboardingWindow, w.isVisible { w.makeKeyAndOrderFront(nil); return }
+        let w = makeOnboardingWindow()
+        w.makeKeyAndOrderFront(nil); w.center()
+        onboardingWindow = w
+    }
+
+    private func makeOnboardingWindow() -> NSWindow {
+        let size = NSSize(width: 660, height: 520)
+        let w = KeyableWindow(
+            contentRect: NSRect(origin: .zero, size: size),
+            styleMask: [.borderless, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        w.level = .normal
+        w.backgroundColor = .clear
+        w.isOpaque = false
+        w.hasShadow = true
+        w.isMovableByWindowBackground = true
+        w.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        w.isReleasedWhenClosed = false
+
+        let hostingView = NSHostingView(rootView: OnboardingView())
+        hostingView.frame = NSRect(origin: .zero, size: size)
+        hostingView.wantsLayer = true
+        hostingView.layer?.cornerRadius = 20
+        hostingView.layer?.masksToBounds = true
+        w.contentView = hostingView
+        return w
     }
 
     private func showSuggestions(for keyword: String, below anchorRect: CGRect) {
@@ -232,7 +250,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func openSettings() {
         NSApplication.shared.activate(ignoringOtherApps: true)
         if let w = settingsWindow, w.isVisible { w.makeKeyAndOrderFront(nil); return }
-        let size = NSSize(width: 560, height: 460)
+        let size = NSSize(width: 720, height: 520)
         let w = KeyableWindow(
             contentRect: NSRect(origin: .zero, size: size),
             styleMask: [.borderless, .fullSizeContentView],
@@ -301,6 +319,15 @@ class AppState: ObservableObject {
     @Published var inlineSuggestionLayout: InlineSuggestionLayout = AppSettings.shared.inlineSuggestionLayout {
         didSet { AppSettings.shared.inlineSuggestionLayout = inlineSuggestionLayout }
     }
+    @Published var popupTheme: PopupTheme = AppSettings.shared.popupTheme {
+        didSet { AppSettings.shared.popupTheme = popupTheme }
+    }
+    @Published var ignoredSiteRules: [IgnoredSiteRule] = AppSettings.shared.ignoredSiteRules {
+        didSet { AppSettings.shared.ignoredSiteRules = ignoredSiteRules }
+    }
+    @Published var ignoredAppRules: [IgnoredAppRule] = AppSettings.shared.ignoredAppRules {
+        didSet { AppSettings.shared.ignoredAppRules = ignoredAppRules }
+    }
     @Published var currentSuggestionQuery: String = ""
     @Published var selectedSuggestionIndex: Int = 0
     @Published var visibleSuggestionStart: Int = 0
@@ -315,10 +342,36 @@ class AppState: ObservableObject {
         numberShortcutEnabled = AppSettings.shared.numberShortcutEnabled
         inlinePanelOpenMode = AppSettings.shared.inlinePanelOpenMode
         inlineSuggestionLayout = AppSettings.shared.inlineSuggestionLayout
+        popupTheme = AppSettings.shared.popupTheme
+        ignoredSiteRules = AppSettings.shared.ignoredSiteRules
+        ignoredAppRules = AppSettings.shared.ignoredAppRules
     }
 
     var currentSuggestionLabel: String {
         triggerCharacter + currentSuggestionQuery
+    }
+
+    func addIgnoredSite(_ domain: String) {
+        let normalized = RulesManager.normalizeDomain(domain)
+        guard !normalized.isEmpty,
+              !ignoredSiteRules.contains(where: { $0.domain == normalized })
+        else { return }
+        ignoredSiteRules.append(IgnoredSiteRule(domain: normalized))
+    }
+
+    func removeIgnoredSite(_ rule: IgnoredSiteRule) {
+        ignoredSiteRules.removeAll { $0.id == rule.id }
+    }
+
+    func addIgnoredApp(_ rule: IgnoredAppRule) {
+        guard !rule.bundleIdentifier.isEmpty,
+              !ignoredAppRules.contains(where: { $0.bundleIdentifier == rule.bundleIdentifier })
+        else { return }
+        ignoredAppRules.append(rule)
+    }
+
+    func removeIgnoredApp(_ rule: IgnoredAppRule) {
+        ignoredAppRules.removeAll { $0.id == rule.id }
     }
 }
 

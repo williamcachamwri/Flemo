@@ -10,6 +10,7 @@ struct SuggestionPopupView: View {
             selectedIndex: appState.selectedSuggestionIndex,
             layout: appState.inlineSuggestionLayout,
             label: appState.currentSuggestionLabel,
+            theme: appState.popupTheme,
             baseHeight: appState.inlinePopupHeight,
             emojiHandler: emojiHandler
         )
@@ -37,11 +38,13 @@ struct InlineSuggestionPillView: View {
     let selectedIndex: Int
     let layout: InlineSuggestionLayout
     let label: String
+    let theme: PopupTheme
     let baseHeight: CGFloat
     let emojiHandler: (Emoji) -> Void
 
     var body: some View {
         let metrics = popupMetrics()
+        let themeStyle = popupThemeStyle()
 
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: metrics.spacing) {
@@ -50,7 +53,8 @@ struct InlineSuggestionPillView: View {
                         emoji: entry.item.emoji,
                         isSelected: entry.absoluteIndex == selectedIndex,
                         itemSize: metrics.itemSize,
-                        fontSize: metrics.fontSize
+                        fontSize: metrics.fontSize,
+                        selectedFill: themeStyle.selectionFill
                     ) {
                         emojiHandler(entry.item.emoji)
                     }
@@ -63,7 +67,7 @@ struct InlineSuggestionPillView: View {
                 if entries.isEmpty {
                     Text("No results")
                         .font(.system(size: metrics.labelFontSize, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white.opacity(0.72))
+                        .foregroundColor(themeStyle.secondaryText)
                         .frame(height: metrics.itemSize)
                         .padding(.horizontal, 10)
                 }
@@ -73,14 +77,14 @@ struct InlineSuggestionPillView: View {
 
             if layout == .descriptive {
                 Rectangle()
-                    .fill(Color.white.opacity(0.12))
+                    .fill(themeStyle.divider)
                     .frame(height: 1)
                     .padding(.horizontal, metrics.horizontalPadding)
                     .transition(.opacity)
 
                 Text(label)
                     .font(.system(size: metrics.labelFontSize, weight: .semibold, design: .rounded))
-                    .foregroundColor(.white.opacity(0.72))
+                    .foregroundColor(themeStyle.secondaryText)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(width: metrics.labelWidth, height: metrics.labelHeight, alignment: .leading)
@@ -97,18 +101,19 @@ struct InlineSuggestionPillView: View {
         .fixedSize()
         .background(
             RoundedRectangle(cornerRadius: metrics.cornerRadius, style: .continuous)
-                .fill(Color(red: 0.075, green: 0.078, blue: 0.085).opacity(0.92))
+                .fill(themeStyle.background)
         )
         .overlay(
             RoundedRectangle(cornerRadius: metrics.cornerRadius, style: .continuous)
-                .stroke(Color.white.opacity(0.24), lineWidth: 1)
+                .stroke(themeStyle.border, lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.22), radius: 16, y: 8)
+        .shadow(color: themeStyle.shadow, radius: 16, y: 8)
         .padding(metrics.outerPadding)
         .animation(.spring(response: 0.24, dampingFraction: 0.88), value: selectedIndex)
         .animation(.spring(response: 0.30, dampingFraction: 0.80, blendDuration: 0.08), value: entriesSignature)
         .animation(.spring(response: 0.24, dampingFraction: 0.88), value: label)
         .animation(.spring(response: 0.34, dampingFraction: 0.84, blendDuration: 0.08), value: layout)
+        .animation(.easeInOut(duration: 0.18), value: theme)
     }
 
     private var entriesSignature: String {
@@ -147,6 +152,56 @@ struct InlineSuggestionPillView: View {
             outerPadding: 4
         )
     }
+
+    private func popupThemeStyle() -> PopupThemeStyle {
+        switch theme {
+        case .nativeDark:
+            return PopupThemeStyle(
+                background: AnyShapeStyle(Color(red: 0.075, green: 0.078, blue: 0.085).opacity(0.92)),
+                border: Color.white.opacity(0.24),
+                divider: Color.white.opacity(0.12),
+                secondaryText: Color.white.opacity(0.72),
+                selectionFill: Color.white.opacity(0.14),
+                shadow: Color.black.opacity(0.22)
+            )
+        case .glass:
+            return PopupThemeStyle(
+                background: AnyShapeStyle(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.26),
+                            Color(red: 0.18, green: 0.42, blue: 0.95).opacity(0.42)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                ),
+                border: Color.white.opacity(0.34),
+                divider: Color.white.opacity(0.20),
+                secondaryText: Color.white.opacity(0.82),
+                selectionFill: Color.white.opacity(0.20),
+                shadow: Color.black.opacity(0.18)
+            )
+        case .midnight:
+            return PopupThemeStyle(
+                background: AnyShapeStyle(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.03, green: 0.05, blue: 0.12).opacity(0.96),
+                            Color(red: 0.08, green: 0.11, blue: 0.26).opacity(0.94)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                ),
+                border: Color(red: 0.36, green: 0.48, blue: 0.95).opacity(0.28),
+                divider: Color(red: 0.36, green: 0.48, blue: 0.95).opacity(0.18),
+                secondaryText: Color(red: 0.82, green: 0.86, blue: 1.0).opacity(0.78),
+                selectionFill: Color(red: 0.36, green: 0.48, blue: 0.95).opacity(0.20),
+                shadow: Color.black.opacity(0.30)
+            )
+        }
+    }
 }
 
 struct SuggestionPillButton: View {
@@ -154,6 +209,7 @@ struct SuggestionPillButton: View {
     let isSelected: Bool
     let itemSize: CGFloat
     let fontSize: CGFloat
+    let selectedFill: Color
     let action: () -> Void
 
     var body: some View {
@@ -163,12 +219,21 @@ struct SuggestionPillButton: View {
                 .frame(width: itemSize, height: itemSize)
                 .background(
                     Circle()
-                        .fill(isSelected ? Color.white.opacity(0.14) : Color.clear)
+                        .fill(isSelected ? selectedFill : Color.clear)
                 )
         }
         .buttonStyle(.plain)
         .help(emoji.name)
     }
+}
+
+private struct PopupThemeStyle {
+    let background: AnyShapeStyle
+    let border: Color
+    let divider: Color
+    let secondaryText: Color
+    let selectionFill: Color
+    let shadow: Color
 }
 
 private struct PopupMetrics {

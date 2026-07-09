@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @State private var selectedTab = 0
@@ -13,6 +14,7 @@ struct SettingsView: View {
         TabItem(icon: "gearshape", title: "General"),
         TabItem(icon: "face.smiling", title: "Emojis"),
         TabItem(icon: "keyboard", title: "Keybinds"),
+        TabItem(icon: "hand.raised", title: "Rules"),
         TabItem(icon: "chart.bar.xaxis", title: "Stats"),
         TabItem(icon: "info.circle", title: "About")
     ]
@@ -44,7 +46,7 @@ struct SettingsView: View {
                 content
             }
         }
-        .frame(width: 560, height: 460)
+        .frame(width: 720, height: 520)
     }
 
     private var sidebar: some View {
@@ -80,7 +82,7 @@ struct SettingsView: View {
 
             Spacer()
         }
-        .frame(width: 148)
+        .frame(width: 172)
         .background(Color.secondary.opacity(0.04))
     }
 
@@ -122,8 +124,9 @@ struct SettingsView: View {
                     case 0: GeneralSettingsPane()
                     case 1: EmojiSettingsPane()
                     case 2: KeybindsSettingsPane()
-                    case 3: StatsSettingsPane()
-                    case 4: AboutSettingsPane()
+                    case 3: RulesSettingsPane()
+                    case 4: StatsSettingsPane()
+                    case 5: AboutSettingsPane()
                     default: EmptyView()
                     }
                 }
@@ -222,6 +225,14 @@ private struct EmojiSettingsPane: View {
                     title: "Layout",
                     selection: $appState.inlineSuggestionLayout,
                     options: InlineSuggestionLayout.allCases
+                )
+
+                SettingsDivider()
+
+                SettingsMenuRow(
+                    title: "Popup Theme",
+                    selection: $appState.popupTheme,
+                    options: PopupTheme.allCases
                 )
             }
 
@@ -403,6 +414,7 @@ private struct InlineSuggestionSettingsPreview: View {
                 selectedIndex: 0,
                 layout: appState.inlineSuggestionLayout,
                 label: appState.triggerCharacter + previewKeyword,
+                theme: appState.popupTheme,
                 baseHeight: 54,
                 emojiHandler: { _ in }
             )
@@ -411,6 +423,7 @@ private struct InlineSuggestionSettingsPreview: View {
         .frame(height: 150)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .animation(.spring(response: 0.34, dampingFraction: 0.84, blendDuration: 0.08), value: appState.inlineSuggestionLayout)
+        .animation(.easeInOut(duration: 0.18), value: appState.popupTheme)
     }
 
     private var previewBackground: some View {
@@ -460,6 +473,196 @@ private struct KeybindsSettingsPane: View {
                 ShortcutRow(icon: "number", title: "Pick by Number", shortcut: "⌘0-9")
             }
         }
+    }
+}
+
+private struct RulesSettingsPane: View {
+    @ObservedObject private var appState = AppState.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            RuleSectionTitle("Ignored Sites")
+            RuleListBox {
+                if appState.ignoredSiteRules.isEmpty {
+                    RuleEmptyText("No ignored sites yet.")
+                } else {
+                    ForEach(appState.ignoredSiteRules) { rule in
+                        RuleRow(icon: "network", title: rule.domain, subtitle: "Domain and subdomains") {
+                            withAnimation(.spring(response: 0.24, dampingFraction: 0.86)) {
+                                appState.removeIgnoredSite(rule)
+                            }
+                        }
+                    }
+                }
+            }
+            HStack {
+                Spacer()
+                RuleActionButton(title: "Add Site...", icon: "plus") {
+                    addSite()
+                }
+            }
+
+            RuleSectionTitle("Ignored Apps")
+            RuleListBox {
+                if appState.ignoredAppRules.isEmpty {
+                    RuleEmptyText("No ignored apps yet.")
+                } else {
+                    ForEach(appState.ignoredAppRules) { rule in
+                        RuleRow(icon: "app.dashed", title: rule.name, subtitle: rule.bundleIdentifier) {
+                            withAnimation(.spring(response: 0.24, dampingFraction: 0.86)) {
+                                appState.removeIgnoredApp(rule)
+                            }
+                        }
+                    }
+                }
+            }
+            HStack {
+                Spacer()
+                RuleActionButton(title: "Add App...", icon: "plus") {
+                    addApp()
+                }
+            }
+        }
+    }
+
+    private func addSite() {
+        let alert = NSAlert()
+        alert.messageText = "Add Ignored Site"
+        alert.informativeText = "Enter a domain such as facebook.com. EmojiGFast will stay quiet on that site and its subdomains."
+        alert.addButton(withTitle: "Add")
+        alert.addButton(withTitle: "Cancel")
+
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 280, height: 24))
+        field.placeholderString = "example.com"
+        alert.accessoryView = field
+
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        withAnimation(.spring(response: 0.24, dampingFraction: 0.86)) {
+            appState.addIgnoredSite(field.stringValue)
+        }
+    }
+
+    private func addApp() {
+        let panel = NSOpenPanel()
+        panel.title = "Choose App to Ignore"
+        panel.prompt = "Add App"
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.allowedContentTypes = [.applicationBundle]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+
+        guard panel.runModal() == .OK,
+              let url = panel.url,
+              let rule = RulesManager.shared.appRule(from: url)
+        else { return }
+
+        withAnimation(.spring(response: 0.24, dampingFraction: 0.86)) {
+            appState.addIgnoredApp(rule)
+        }
+    }
+}
+
+private struct RuleSectionTitle: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 15, weight: .bold, design: .rounded))
+            .foregroundColor(.primary.opacity(0.92))
+            .padding(.leading, 14)
+    }
+}
+
+private struct RuleListBox<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            content
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.black.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.white.opacity(0.16), lineWidth: 1)
+        )
+    }
+}
+
+private struct RuleEmptyText: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 13, weight: .semibold, design: .rounded))
+            .foregroundColor(.secondary.opacity(0.72))
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct RuleRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let remove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            SettingsIcon(name: icon)
+            RowText(title: title, subtitle: subtitle)
+            Spacer()
+            Button(action: remove) {
+                Image(systemName: "trash")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.secondary.opacity(0.80))
+                    .frame(width: 26, height: 26)
+                    .background(
+                        Circle()
+                            .fill(Color.secondary.opacity(0.10))
+                    )
+            }
+            .buttonStyle(.plain)
+        }
+        .settingsRowPadding()
+    }
+}
+
+private struct RuleActionButton: View {
+    let title: String
+    let icon: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+            }
+            .foregroundColor(.primary.opacity(0.9))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.secondary.opacity(0.12))
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 

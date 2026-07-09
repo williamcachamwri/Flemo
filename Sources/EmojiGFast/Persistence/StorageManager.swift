@@ -43,6 +43,9 @@ struct AppSettingsData: Codable {
     var emojiBoardShortcut: ShortcutKey
     var inlinePanelOpenMode: InlinePanelOpenMode
     var inlineSuggestionLayout: InlineSuggestionLayout
+    var popupTheme: PopupTheme
+    var ignoredSiteRules: [IgnoredSiteRule]
+    var ignoredAppRules: [IgnoredAppRule]
 
     init(
         triggerCharacter: String,
@@ -51,7 +54,10 @@ struct AppSettingsData: Codable {
         numberShortcutEnabled: Bool,
         emojiBoardShortcut: ShortcutKey,
         inlinePanelOpenMode: InlinePanelOpenMode = .recents,
-        inlineSuggestionLayout: InlineSuggestionLayout = .sleek
+        inlineSuggestionLayout: InlineSuggestionLayout = .sleek,
+        popupTheme: PopupTheme = .nativeDark,
+        ignoredSiteRules: [IgnoredSiteRule] = [],
+        ignoredAppRules: [IgnoredAppRule] = []
     ) {
         self.triggerCharacter = triggerCharacter
         self.minTriggerLength = minTriggerLength
@@ -60,6 +66,9 @@ struct AppSettingsData: Codable {
         self.emojiBoardShortcut = emojiBoardShortcut
         self.inlinePanelOpenMode = inlinePanelOpenMode
         self.inlineSuggestionLayout = inlineSuggestionLayout
+        self.popupTheme = popupTheme
+        self.ignoredSiteRules = ignoredSiteRules
+        self.ignoredAppRules = ignoredAppRules
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -70,6 +79,9 @@ struct AppSettingsData: Codable {
         case emojiBoardShortcut
         case inlinePanelOpenMode
         case inlineSuggestionLayout
+        case popupTheme
+        case ignoredSiteRules
+        case ignoredAppRules
     }
 
     init(from decoder: Decoder) throws {
@@ -82,6 +94,9 @@ struct AppSettingsData: Codable {
             ?? ShortcutKey(keyCode: 0x00, modifiers: 0x0100)
         inlinePanelOpenMode = try container.decodeIfPresent(InlinePanelOpenMode.self, forKey: .inlinePanelOpenMode) ?? .recents
         inlineSuggestionLayout = try container.decodeIfPresent(InlineSuggestionLayout.self, forKey: .inlineSuggestionLayout) ?? .sleek
+        popupTheme = try container.decodeIfPresent(PopupTheme.self, forKey: .popupTheme) ?? .nativeDark
+        ignoredSiteRules = try container.decodeIfPresent([IgnoredSiteRule].self, forKey: .ignoredSiteRules) ?? []
+        ignoredAppRules = try container.decodeIfPresent([IgnoredAppRule].self, forKey: .ignoredAppRules) ?? []
     }
 
     func encode(to encoder: Encoder) throws {
@@ -93,6 +108,9 @@ struct AppSettingsData: Codable {
         try container.encode(emojiBoardShortcut, forKey: .emojiBoardShortcut)
         try container.encode(inlinePanelOpenMode, forKey: .inlinePanelOpenMode)
         try container.encode(inlineSuggestionLayout, forKey: .inlineSuggestionLayout)
+        try container.encode(popupTheme, forKey: .popupTheme)
+        try container.encode(ignoredSiteRules, forKey: .ignoredSiteRules)
+        try container.encode(ignoredAppRules, forKey: .ignoredAppRules)
     }
 }
 
@@ -113,4 +131,41 @@ enum InlineSuggestionLayout: String, Codable, CaseIterable, Identifiable {
     case descriptive = "Descriptive"
 
     var id: String { rawValue }
+}
+
+enum PopupTheme: String, Codable, CaseIterable, Identifiable {
+    case nativeDark = "Native Dark"
+    case glass = "Glass"
+    case midnight = "Midnight"
+
+    var id: String { rawValue }
+}
+
+struct IgnoredSiteRule: Codable, Identifiable, Equatable {
+    var id: String
+    var domain: String
+
+    init(id: String = UUID().uuidString, domain: String) {
+        self.id = id
+        self.domain = domain
+    }
+}
+
+struct IgnoredAppRule: Codable, Identifiable, Equatable {
+    var id: String
+    var name: String
+    var bundleIdentifier: String
+    var path: String
+
+    init(
+        id: String = UUID().uuidString,
+        name: String,
+        bundleIdentifier: String,
+        path: String
+    ) {
+        self.id = id
+        self.name = name
+        self.bundleIdentifier = bundleIdentifier
+        self.path = path
+    }
 }

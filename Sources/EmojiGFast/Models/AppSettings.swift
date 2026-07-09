@@ -40,6 +40,21 @@ class AppSettings {
         set { current.inlineSuggestionLayout = newValue; persist() }
     }
 
+    var popupTheme: PopupTheme {
+        get { current.popupTheme }
+        set { current.popupTheme = newValue; persist() }
+    }
+
+    var ignoredSiteRules: [IgnoredSiteRule] {
+        get { current.ignoredSiteRules }
+        set { current.ignoredSiteRules = newValue; persist() }
+    }
+
+    var ignoredAppRules: [IgnoredAppRule] {
+        get { current.ignoredAppRules }
+        set { current.ignoredAppRules = newValue; persist() }
+    }
+
     private var current: AppSettingsData
 
     private init() {
@@ -53,7 +68,8 @@ class AppSettings {
                 numberShortcutEnabled: true,
                 emojiBoardShortcut: ShortcutKey(keyCode: 0x00, modifiers: 0x0100),
                 inlinePanelOpenMode: .recents,
-                inlineSuggestionLayout: .sleek
+                inlineSuggestionLayout: .sleek,
+                popupTheme: .nativeDark
             )
         }
     }
@@ -70,7 +86,10 @@ class AppSettings {
             numberShortcutEnabled: true,
             emojiBoardShortcut: ShortcutKey(keyCode: 0x00, modifiers: 0x0100),
             inlinePanelOpenMode: .recents,
-            inlineSuggestionLayout: .sleek
+            inlineSuggestionLayout: .sleek,
+            popupTheme: .nativeDark,
+            ignoredSiteRules: [],
+            ignoredAppRules: []
         )
         persist()
     }

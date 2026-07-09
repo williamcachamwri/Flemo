@@ -153,6 +153,11 @@ class GlobalInputMonitor: NSObject {
 
     private func processKeyEvent(_ event: NSEvent) -> Bool {
         guard appState.inlineTriggerEnabled else { return false }
+        if RulesManager.shared.shouldSuppressInput(appState: appState) {
+            resetTriggerSession()
+            cancelSuggestions()
+            return false
+        }
 
         let chars = event.characters ?? ""
         let rawChars = event.charactersIgnoringModifiers ?? ""
@@ -313,6 +318,11 @@ class GlobalInputMonitor: NSObject {
 
     private func pollAXContext() {
         guard appState.inlineTriggerEnabled else { return }
+        if RulesManager.shared.shouldSuppressInput(appState: appState) {
+            resetTriggerSession()
+            cancelSuggestions()
+            return
+        }
         guard let ctx = textProvider.getTextContext() else { return }
 
         let trigger = appState.triggerCharacter
