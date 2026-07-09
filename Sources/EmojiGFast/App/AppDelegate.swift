@@ -186,6 +186,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             TextInsertionHelper.shared.insertText(emoji.character)
         }
+        globalInputMonitor.resetTriggerSession()
         hideSuggestions()
     }
 

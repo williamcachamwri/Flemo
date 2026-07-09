@@ -52,6 +52,15 @@ class GlobalInputMonitor: NSObject {
         installKeyboardMonitor()
     }
 
+    func resetTriggerSession() {
+        pendingCancelWorkItem?.cancel()
+        pendingCancelWorkItem = nil
+        isTriggered = false
+        eventBuffer = ""
+        lastDetectedKeyword = ""
+        lastFireTime = .distantPast
+    }
+
     private func startPollingIfNeeded() {
         guard pollTimer == nil else { return }
         let pollInterval: TimeInterval = 0.15
