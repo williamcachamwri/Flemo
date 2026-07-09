@@ -160,8 +160,8 @@ jobs:
           range="${tag}"
           if [ -n "$prev_tag" ]; then range="${prev_tag}..${tag}"; fi
 
-          changelog="$(git log "$range" --no-merges --pretty=format:"- %s — @%aN")"
-          contributors="$(git log "$range" --no-merges --pretty=format:"%aN" | sort -u)"
+          changelog="$(git log "$range" --no-merges --pretty=format:"- %s — @%aN" | grep -v -e '\[skip ci\]' -e 'github-actions\[bot\]' || true)"
+          contributors="$(git log "$range" --no-merges --pretty=format:"%aN" | grep -v 'github-actions\[bot\]' | sort -u || true)"
 
           {
             echo "## Install"
