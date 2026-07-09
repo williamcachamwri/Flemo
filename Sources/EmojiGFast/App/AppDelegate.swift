@@ -99,18 +99,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         currentSuggestionReplacesTrigger = true
         appState.inlinePopupHeight = popupHeight(for: anchorRect)
         let results = EmojiSearchEngine.shared.search(keyword: keyword, maxResults: 10)
-        if !isSameKeyword || appState.suggestions.isEmpty {
-            appState.suggestions = results.enumerated().map { (i, e) in
-                SuggestionItem(emoji: e, shortcutIndex: appState.numberShortcutEnabled && i < 10 ? i : nil)
+        let nextSuggestions = results.enumerated().map { (i, e) in
+            SuggestionItem(emoji: e, shortcutIndex: appState.numberShortcutEnabled && i < 10 ? i : nil)
+        }
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.82, blendDuration: 0.08)) {
+            appState.suggestions = nextSuggestions
+            if isSameKeyword {
+                clampVisibleSelection()
+            } else {
+                appState.selectedSuggestionIndex = 0
+                appState.visibleSuggestionStart = 0
             }
+            appState.isShowingSuggestions = !results.isEmpty
         }
-        if isSameKeyword {
-            clampVisibleSelection()
-        } else {
-            appState.selectedSuggestionIndex = 0
-            appState.visibleSuggestionStart = 0
-        }
-        appState.isShowingSuggestions = !results.isEmpty
         if appState.isShowingSuggestions { showOverlayAfterLayout(below: anchorRect) }
         else {
             appState.currentSuggestionQuery = ""

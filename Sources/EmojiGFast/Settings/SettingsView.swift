@@ -239,7 +239,7 @@ private struct EmojiSettingsPane: View {
                 StepperRow(
                     icon: "textformat.123",
                     title: "Minimum Keyword",
-                    subtitle: "Characters required before search suggestions",
+                    subtitle: "Required before search starts",
                     value: $appState.minTriggerLength,
                     range: 1...5
                 )
@@ -895,8 +895,8 @@ private struct VisualEffectMaterialView: NSViewRepresentable {
 
 private extension View {
     func settingsRowPadding() -> some View {
-        padding(.vertical, 10)
-            .padding(.horizontal, 2)
+        padding(.vertical, 12)
+            .padding(.horizontal, 14)
     }
 
     func settingsCardRowPadding() -> some View {

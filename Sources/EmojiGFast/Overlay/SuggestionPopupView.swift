@@ -29,7 +29,7 @@ struct InlineSuggestionEntry: Identifiable {
     let absoluteIndex: Int
     let item: SuggestionItem
 
-    var id: UUID { item.id }
+    var id: String { item.emoji.character }
 }
 
 struct InlineSuggestionPillView: View {
@@ -54,6 +54,10 @@ struct InlineSuggestionPillView: View {
                     ) {
                         emojiHandler(entry.item.emoji)
                     }
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.72).combined(with: .opacity),
+                        removal: .scale(scale: 0.86).combined(with: .opacity)
+                    ))
                 }
 
                 if entries.isEmpty {
@@ -81,9 +85,10 @@ struct InlineSuggestionPillView: View {
                     .truncationMode(.tail)
                     .frame(width: metrics.labelWidth, height: metrics.labelHeight, alignment: .leading)
                     .padding(.horizontal, metrics.horizontalPadding)
+                    .id(label)
                     .transition(.asymmetric(
-                        insertion: .move(edge: .top).combined(with: .opacity),
-                        removal: .move(edge: .top).combined(with: .opacity)
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
                     ))
             }
         }
@@ -101,7 +106,13 @@ struct InlineSuggestionPillView: View {
         .shadow(color: .black.opacity(0.22), radius: 16, y: 8)
         .padding(metrics.outerPadding)
         .animation(.spring(response: 0.24, dampingFraction: 0.88), value: selectedIndex)
+        .animation(.spring(response: 0.30, dampingFraction: 0.80, blendDuration: 0.08), value: entriesSignature)
+        .animation(.spring(response: 0.24, dampingFraction: 0.88), value: label)
         .animation(.spring(response: 0.34, dampingFraction: 0.84, blendDuration: 0.08), value: layout)
+    }
+
+    private var entriesSignature: String {
+        entries.map { $0.item.emoji.character }.joined(separator: "")
     }
 
     private func popupMetrics() -> PopupMetrics {
