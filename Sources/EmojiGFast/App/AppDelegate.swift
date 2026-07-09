@@ -191,11 +191,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func toggleEmojiBoard() {
         if let w = emojiBoardWindow, w.isVisible { w.close(); emojiBoardWindow = nil; return }
+        NSApplication.shared.activate(ignoringOtherApps: true)
         let v = EmojiBoardView { [weak self] e in self?.handleEmojiSelected(e) }
-        let w = NSWindow(contentViewController: NSHostingController(rootView: v))
-        w.title = "Emoji Board"
-        w.styleMask = [.titled, .closable, .resizable, .miniaturizable]
-        w.setContentSize(NSSize(width: 500, height: 600))
+        let size = NSSize(width: 620, height: 520)
+        let w = KeyableWindow(
+            contentRect: NSRect(origin: .zero, size: size),
+            styleMask: [.borderless, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        w.level = .normal
+        w.backgroundColor = .clear
+        w.isOpaque = false
+        w.hasShadow = true
+        w.isMovableByWindowBackground = true
+        w.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        w.isReleasedWhenClosed = false
+
+        let hostingView = NSHostingView(rootView: v)
+        hostingView.frame = NSRect(origin: .zero, size: size)
+        hostingView.wantsLayer = true
+        hostingView.layer?.cornerRadius = 20
+        hostingView.layer?.masksToBounds = true
+        w.contentView = hostingView
         w.makeKeyAndOrderFront(nil); w.center()
         emojiBoardWindow = w
     }
