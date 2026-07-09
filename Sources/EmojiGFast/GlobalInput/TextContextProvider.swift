@@ -60,13 +60,13 @@ class TextContextProvider {
             let start = max(0, cursor - boundedLength)
             if let textRect = screenBounds(element: element, range: CFRange(location: start, length: boundedLength)),
                isUsableAnchor(textRect) {
-                return textRect
+                return triggerAnchorRect(from: textRect, typedLength: boundedLength, element: element)
             }
         }
 
         if let markerRect = selectedTextMarkerBounds(element: element),
            isUsableAnchor(markerRect) {
-            return markerRect
+            return triggerAnchorRect(from: markerRect, typedLength: length, element: element)
         }
 
         guard let cursor = selectedCursor(in: element) else {
@@ -77,7 +77,7 @@ class TextContextProvider {
 
         if let cursorRect = cursorScreenBounds(element: element, cursor: cursor),
            isUsableAnchor(cursorRect) {
-            return cursorRect
+            return triggerAnchorRect(from: cursorRect, typedLength: length, element: element)
         }
 
         if let approximateRect = approximateTypingBounds(element: element, typedLength: length) {
@@ -334,11 +334,11 @@ class TextContextProvider {
 
         let lineHeight = min(max(inputRect.height * 0.55, 14), 22)
         let verticalInset = max((inputRect.height - lineHeight) / 2, 2)
-        let horizontalInset: CGFloat = inputRect.height <= 28 ? 6 : 12
-        let estimatedTextWidth = CGFloat(max(typedLength, 1)) * 7.2
-        let x = min(max(inputRect.minX + horizontalInset + estimatedTextWidth, inputRect.minX + horizontalInset), inputRect.maxX - 8)
+        let horizontalInset = horizontalTextInset(for: inputRect)
+        let estimatedTextWidth = estimatedTriggerWidth(characterCount: typedLength, lineHeight: lineHeight)
+        let x = min(max(inputRect.minX + horizontalInset, inputRect.minX + 2), inputRect.maxX - 8)
         let y = inputRect.minY + verticalInset
-        return CGRect(x: x, y: y, width: 1, height: lineHeight)
+        return CGRect(x: x, y: y, width: estimatedTextWidth, height: lineHeight)
     }
 
     private func screenBounds(element: AXUIElement, range: CFRange) -> CGRect? {
@@ -361,6 +361,39 @@ class TextContextProvider {
         if normalized.width < 1 { normalized.size.width = 1 }
         if normalized.height < 1 { normalized.size.height = 14 }
         return normalized
+    }
+
+    private func triggerAnchorRect(from rect: CGRect, typedLength: Int, element: AXUIElement) -> CGRect {
+        guard typedLength > 0 else { return rect }
+
+        let estimatedWidth = estimatedTriggerWidth(characterCount: typedLength, lineHeight: rect.height)
+        guard rect.width <= max(4, estimatedWidth * 0.55) else {
+            return rect
+        }
+
+        var x = rect.maxX - estimatedWidth
+        if let inputRect = bestElementBounds(element: element) ?? focusedElementBounds(element: element),
+           isLikelyInputAnchor(inputRect) {
+            let minimumX = inputRect.minX + horizontalTextInset(for: inputRect)
+            let maximumX = inputRect.maxX - 8
+            x = min(max(x, minimumX), maximumX)
+        }
+
+        return CGRect(
+            x: x,
+            y: rect.minY,
+            width: max(estimatedWidth, 1),
+            height: max(rect.height, 14)
+        )
+    }
+
+    private func estimatedTriggerWidth(characterCount: Int, lineHeight: CGFloat) -> CGFloat {
+        let glyphWidth = min(max(lineHeight * 0.55, 7.2), 13.5)
+        return CGFloat(max(characterCount, 1)) * glyphWidth
+    }
+
+    private func horizontalTextInset(for rect: CGRect) -> CGFloat {
+        rect.height <= 28 ? 6 : 12
     }
 
     private func focusedDescendant(of element: AXUIElement) -> AXUIElement? {

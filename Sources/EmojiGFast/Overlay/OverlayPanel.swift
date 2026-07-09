@@ -36,7 +36,7 @@ class OverlayPanel: NSPanel {
         let panelWidth = contentSize.width
         let panelHeight = contentSize.height
         let gap = max(3, min(5, panelHeight * 0.08))
-        let horizontalNudge: CGFloat = -2
+        let horizontalNudge: CGFloat = -4
 
         guard let anchor = cocoaRect(fromAXRect: axRect),
               let screen = screen(containingCocoaPoint: NSPoint(x: anchor.midX, y: anchor.midY))
