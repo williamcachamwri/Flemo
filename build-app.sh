@@ -1,11 +1,13 @@
 #!/bin/bash
 set -euo pipefail
 
-APP_NAME="EmojiGFast"
+APP_NAME="Flemo"
+OLD_APP_NAME="EmojiGFast"
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="$PROJECT_DIR/.build"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 INSTALL_PATH="/Applications/$APP_NAME.app"
+OLD_INSTALL_PATH="/Applications/$OLD_APP_NAME.app"
 
 if [ -z "${SIGN_IDENTITY:-}" ]; then
   PREFERRED_SIGN_IDENTITY="Apple Development: levinhkhang93@gmail.com (DSGXR894W5)"
@@ -30,7 +32,7 @@ cp "$PROJECT_DIR/Info.plist" "$APP_BUNDLE/Contents/"
 
 cp "$PROJECT_DIR/Sources/EmojiGFast/Resources/emoji-data.json" "$APP_BUNDLE/Contents/Resources/"
 
-RESOURCE_BUNDLE="$BUILD_DIR/out/Products/Release/EmojiGFast_EmojiGFast.bundle"
+RESOURCE_BUNDLE="$BUILD_DIR/out/Products/Release/Flemo_Flemo.bundle"
 if [ -d "$RESOURCE_BUNDLE" ]; then
   cp -r "$RESOURCE_BUNDLE/Contents/Resources/" "$APP_BUNDLE/Contents/Resources/"
 fi
@@ -48,9 +50,14 @@ if [ "$APP_BUNDLE" != "$INSTALL_PATH" ]; then
   echo "✅ Deployed to $INSTALL_PATH"
 fi
 
+if [ -d "$OLD_INSTALL_PATH" ]; then
+  echo "Removing old app bundle at $OLD_INSTALL_PATH..."
+  rm -rf "$OLD_INSTALL_PATH"
+fi
+
 echo ""
 echo "If macOS still shows stale permissions from the old ad-hoc build, reset once before re-granting:"
-echo "  tccutil reset Accessibility com.emoji-g-fast.app"
-echo "  tccutil reset ListenEvent com.emoji-g-fast.app"
+echo "  tccutil reset Accessibility com.flemo.app"
+echo "  tccutil reset ListenEvent com.flemo.app"
 echo ""
 echo "Run with: open \"$APP_BUNDLE\""

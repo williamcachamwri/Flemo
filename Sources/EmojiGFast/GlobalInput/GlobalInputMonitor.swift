@@ -2,7 +2,7 @@ import Cocoa
 import os.log
 
 class GlobalInputMonitor: NSObject {
-    private let log = OSLog(subsystem: "com.emoji-g-fast", category: "InputMonitor")
+    private let log = OSLog(subsystem: "com.flemo.app", category: "InputMonitor")
     private let appState: AppState
     private let textProvider = TextContextProvider.shared
     private var eventTap: CFMachPort?

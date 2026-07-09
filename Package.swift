@@ -2,13 +2,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "EmojiGFast",
+    name: "Flemo",
     platforms: [
         .macOS(.v14)
     ],
     targets: [
         .executableTarget(
-            name: "EmojiGFast",
+            name: "Flemo",
+            path: "Sources/EmojiGFast",
             resources: [
                 .process("Resources")
             ]

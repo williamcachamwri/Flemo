@@ -4,7 +4,7 @@ import os.log
 
 class AccessibilityPermissionManager: NSObject, ObservableObject {
     static let shared = AccessibilityPermissionManager()
-    private let log = OSLog(subsystem: "com.emoji-g-fast", category: "Permission")
+    private let log = OSLog(subsystem: "com.flemo.app", category: "Permission")
     @Published var accessibilityGranted: Bool = false
     @Published var inputMonitoringGranted: Bool = false
 
@@ -76,19 +76,19 @@ class AccessibilityPermissionManager: NSObject, ObservableObject {
 
     func showPermissionGuide() {
         let alert = NSAlert()
-        alert.messageText = "EmojiGFast Needs Permissions"
+        alert.messageText = "Flemo Needs Permissions"
         alert.informativeText = """
-        To detect keystrokes and show inline emoji suggestions, EmojiGFast needs TWO permissions:
+        To detect keystrokes and show inline emoji suggestions, Flemo needs TWO permissions:
 
         1. Accessibility — for reading text and cursor position:
            System Settings → Privacy & Security → Accessibility
-           → Add /Applications/EmojiGFast.app, toggle ON.
+           → Add /Applications/Flemo.app, toggle ON.
 
         2. Input Monitoring — for detecting keyboard events:
            System Settings → Privacy & Security → Input Monitoring
-           → Add /Applications/EmojiGFast.app, toggle ON.
+           → Add /Applications/Flemo.app, toggle ON.
 
-        After granting both, return to EmojiGFast. It will retry automatically.
+        After granting both, return to Flemo. It will retry automatically.
         """
         alert.alertStyle = .informational
         alert.addButton(withTitle: "Open Accessibility")

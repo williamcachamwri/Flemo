@@ -51,7 +51,7 @@ struct OnboardingView: View {
         HStack(spacing: 12) {
             OnboardingLogoImage(size: 30)
             VStack(alignment: .leading, spacing: 1) {
-                Text("EmojiGFast")
+                Text("Flemo")
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                 Text("Inline emoji that follows your typing.")
                     .font(.system(size: 12, weight: .medium, design: .rounded))

@@ -1,7 +1,7 @@
 import Foundation
 
 enum Constants {
-    static let appName = "EmojiGFast"
+    static let appName = "Flemo"
     static let defaultTriggerCharacter = "`"
     static let defaultMinTriggerLength = 2
     static let maxSuggestionResults = 10

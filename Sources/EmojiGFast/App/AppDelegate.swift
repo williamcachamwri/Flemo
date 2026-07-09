@@ -12,7 +12,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var emojiBoardWindow: NSWindow?
     private var currentKeyword = ""
     private var currentSuggestionReplacesTrigger = false
-    private let log = OSLog(subsystem: "com.emoji-g-fast", category: "AppDelegate")
+    private let log = OSLog(subsystem: "com.flemo.app", category: "AppDelegate")
 
     let appState = AppState.shared
 

@@ -10,7 +10,7 @@ struct TextContext {
 
 class TextContextProvider {
     static let shared = TextContextProvider()
-    private let log = OSLog(subsystem: "com.emoji-g-fast", category: "TextCtx")
+    private let log = OSLog(subsystem: "com.flemo.app", category: "TextCtx")
     private static let maxContextLength = 100
     private static let recentAnchorLifetime: TimeInterval = 45
 

@@ -1,7 +1,7 @@
 import Cocoa
 
 @main
-enum EmojiGFastApp {
+enum FlemoApp {
     private static let appDelegate = AppDelegate()
 
     static func main() {

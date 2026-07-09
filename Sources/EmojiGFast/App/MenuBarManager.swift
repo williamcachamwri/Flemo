@@ -12,7 +12,7 @@ class MenuBarManager {
 
     private func setupMenuBar() {
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "face.smiling", accessibilityDescription: "EmojiGFast")
+            button.image = NSImage(systemSymbolName: "face.smiling", accessibilityDescription: "Flemo")
         }
 
         let menu = NSMenu()

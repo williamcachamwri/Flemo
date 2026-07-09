@@ -53,7 +53,7 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 AppLogoImage(size: 22)
-                Text("EmojiGFast")
+                Text("Flemo")
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
             }
@@ -528,7 +528,7 @@ private struct RulesSettingsPane: View {
     private func addSite() {
         let alert = NSAlert()
         alert.messageText = "Add Ignored Site"
-        alert.informativeText = "Enter a domain such as facebook.com. EmojiGFast will stay quiet on that site and its subdomains."
+        alert.informativeText = "Enter a domain such as facebook.com. Flemo will stay quiet on that site and its subdomains."
         alert.addButton(withTitle: "Add")
         alert.addButton(withTitle: "Cancel")
 
@@ -706,7 +706,7 @@ private struct AboutSettingsPane: View {
             HStack(spacing: 12) {
                 AppLogoImage(size: 48)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("EmojiGFast")
+                    Text("Flemo")
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                     Text("Inline emoji picker for macOS")
                         .font(.system(size: 11, weight: .regular, design: .rounded))
@@ -733,7 +733,7 @@ private struct AboutSettingsPane: View {
     }
 
     private var bundleIdentifier: String {
-        Bundle.main.bundleIdentifier ?? "com.emoji-g-fast.app"
+        Bundle.main.bundleIdentifier ?? "com.flemo.app"
     }
 }
 
