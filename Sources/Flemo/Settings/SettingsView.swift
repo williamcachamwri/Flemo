@@ -262,14 +262,6 @@ private struct EmojiSettingsPane: View {
                     range: 1...5
                 )
 
-                SettingsDivider()
-
-                ToggleRow(
-                    icon: "command",
-                    title: "Command-number Selection",
-                    subtitle: "Use Command + 0-9 to choose suggestions",
-                    isOn: $appState.numberShortcutEnabled
-                )
             }
         }
     }
@@ -404,10 +396,7 @@ private struct InlineSuggestionSettingsPreview: View {
         previewEmojis.enumerated().map { offset, emoji in
             InlineSuggestionEntry(
                 absoluteIndex: offset,
-                item: SuggestionItem(
-                    emoji: emoji,
-                    shortcutIndex: appState.numberShortcutEnabled ? offset : nil
-                )
+                item: SuggestionItem(emoji: emoji)
             )
         }
     }
@@ -734,9 +723,6 @@ private struct KeybindsSettingsPane: View {
             Divider().background(Color.white.opacity(0.06))
 
             ShortcutRow(icon: "face.smiling", title: "Emoji Board", shortcut: "⌘E")
-            if appState.numberShortcutEnabled {
-                ShortcutRow(icon: "number", title: "Pick by Number", shortcut: "⌘0-9")
-            }
         }
     }
 }

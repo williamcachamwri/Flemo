@@ -62,7 +62,6 @@ struct AppSettingsData: Codable {
     var triggerCharacter: String
     var minTriggerLength: Int
     var inlineTriggerEnabled: Bool
-    var numberShortcutEnabled: Bool
     var emojiBoardShortcut: ShortcutKey
     var inlinePanelOpenMode: InlinePanelOpenMode
     var inlineSuggestionLayout: InlineSuggestionLayout
@@ -75,7 +74,6 @@ struct AppSettingsData: Codable {
         triggerCharacter: String,
         minTriggerLength: Int,
         inlineTriggerEnabled: Bool,
-        numberShortcutEnabled: Bool,
         emojiBoardShortcut: ShortcutKey,
         inlinePanelOpenMode: InlinePanelOpenMode = .recents,
         inlineSuggestionLayout: InlineSuggestionLayout = .sleek,
@@ -87,7 +85,6 @@ struct AppSettingsData: Codable {
         self.triggerCharacter = triggerCharacter
         self.minTriggerLength = minTriggerLength
         self.inlineTriggerEnabled = inlineTriggerEnabled
-        self.numberShortcutEnabled = numberShortcutEnabled
         self.emojiBoardShortcut = emojiBoardShortcut
         self.inlinePanelOpenMode = inlinePanelOpenMode
         self.inlineSuggestionLayout = inlineSuggestionLayout
@@ -101,7 +98,6 @@ struct AppSettingsData: Codable {
         case triggerCharacter
         case minTriggerLength
         case inlineTriggerEnabled
-        case numberShortcutEnabled
         case emojiBoardShortcut
         case inlinePanelOpenMode
         case inlineSuggestionLayout
@@ -116,7 +112,6 @@ struct AppSettingsData: Codable {
         triggerCharacter = try container.decodeIfPresent(String.self, forKey: .triggerCharacter) ?? "`"
         minTriggerLength = try container.decodeIfPresent(Int.self, forKey: .minTriggerLength) ?? 2
         inlineTriggerEnabled = try container.decodeIfPresent(Bool.self, forKey: .inlineTriggerEnabled) ?? true
-        numberShortcutEnabled = try container.decodeIfPresent(Bool.self, forKey: .numberShortcutEnabled) ?? true
         emojiBoardShortcut = try container.decodeIfPresent(ShortcutKey.self, forKey: .emojiBoardShortcut)
             ?? ShortcutKey(keyCode: 0x00, modifiers: 0x0100)
         inlinePanelOpenMode = try container.decodeIfPresent(InlinePanelOpenMode.self, forKey: .inlinePanelOpenMode) ?? .recents
@@ -132,7 +127,6 @@ struct AppSettingsData: Codable {
         try container.encode(triggerCharacter, forKey: .triggerCharacter)
         try container.encode(minTriggerLength, forKey: .minTriggerLength)
         try container.encode(inlineTriggerEnabled, forKey: .inlineTriggerEnabled)
-        try container.encode(numberShortcutEnabled, forKey: .numberShortcutEnabled)
         try container.encode(emojiBoardShortcut, forKey: .emojiBoardShortcut)
         try container.encode(inlinePanelOpenMode, forKey: .inlinePanelOpenMode)
         try container.encode(inlineSuggestionLayout, forKey: .inlineSuggestionLayout)

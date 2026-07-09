@@ -27,12 +27,22 @@ class MenuBarManager {
         menu.addItem(NSMenuItem.separator())
         menu.addItem(item("Welcome / Onboarding", action: #selector(AppDelegate.showOnboarding)))
         menu.addItem(item("Check for Updates...", action: #selector(AppDelegate.checkForUpdates)))
-        menu.addItem(item("Check Permissions", action: #selector(AppDelegate.checkPermissions)))
-        menu.addItem(item("Request Permissions", action: #selector(AppDelegate.requestPermissions)))
+
+        let versionItem = NSMenuItem(title: versionString, action: nil, keyEquivalent: "")
+        versionItem.isEnabled = false
+        menu.addItem(versionItem)
+
         menu.addItem(item("Settings...", action: #selector(AppDelegate.openSettings), key: ","))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(item("Quit", action: #selector(AppDelegate.quit), key: "q"))
 
         statusItem.menu = menu
+    }
+
+    private var versionString: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "Development"
+        let build = info?["CFBundleVersion"] as? String
+        return build.map { "Version \(version) (\($0))" } ?? "Version \(version)"
     }
 }

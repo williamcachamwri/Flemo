@@ -6,7 +6,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarManager: MenuBarManager!
     private var globalInputMonitor: GlobalInputMonitor!
     private var overlayPanel: OverlayPanel!
-    private var shortcutMonitor: ShortcutSelectionMonitor!
+
     private var updateController: SparkleUpdateController!
     private var onboardingWindow: NSWindow?
     private var settingsWindow: NSWindow?
@@ -52,11 +52,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.confirmSelectedSuggestion()
             }
             globalInputMonitor.start()
-
-            shortcutMonitor = ShortcutSelectionMonitor(appState: appState)
-            shortcutMonitor.start(
-                emojiHandler: { [weak self] e in self?.handleEmojiSelected(e) }
-            )
 
             showOnboardingIfNeeded()
         }
@@ -119,9 +114,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         currentSuggestionReplacesTrigger = true
         appState.inlinePopupHeight = popupHeight(for: anchorRect)
         let results = EmojiSearchEngine.shared.search(keyword: keyword, maxResults: 10)
-        let nextSuggestions = results.enumerated().map { (i, e) in
-            SuggestionItem(emoji: e, shortcutIndex: appState.numberShortcutEnabled && i < 10 ? i : nil)
-        }
+        let nextSuggestions = results.map { SuggestionItem(emoji: $0) }
         withAnimation(.spring(response: 0.28, dampingFraction: 0.82, blendDuration: 0.08)) {
             appState.suggestions = nextSuggestions
             if isSameKeyword {
@@ -277,31 +270,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindow = w
     }
 
-    @objc func checkPermissions() {
-        let pm = AccessibilityPermissionManager.shared
-        let desc = pm.statusDescription()
-        let a = NSAlert()
-        a.messageText = "Permissions Status"
-        a.informativeText = desc
-        a.runModal()
-    }
-
-    @objc func requestPermissions() {
-        let pm = AccessibilityPermissionManager.shared
-        pm.showPermissionGuide()
-        pm.requestAccessibility()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            pm.requestInputMonitoring()
-            self.globalInputMonitor.refreshPermissionsAndRetry()
-        }
-    }
-
     @objc func checkForUpdates() {
         updateController.checkForUpdates()
     }
 
     @objc func quit() { NSApplication.shared.terminate(nil) }
 }
+
+
 
 class AppState: ObservableObject {
     static let shared = AppState()
@@ -315,9 +291,6 @@ class AppState: ObservableObject {
     }
     @Published var inlineTriggerEnabled: Bool = AppSettings.shared.inlineTriggerEnabled {
         didSet { AppSettings.shared.inlineTriggerEnabled = inlineTriggerEnabled }
-    }
-    @Published var numberShortcutEnabled: Bool = AppSettings.shared.numberShortcutEnabled {
-        didSet { AppSettings.shared.numberShortcutEnabled = numberShortcutEnabled }
     }
     @Published var inlinePanelOpenMode: InlinePanelOpenMode = AppSettings.shared.inlinePanelOpenMode {
         didSet { AppSettings.shared.inlinePanelOpenMode = inlinePanelOpenMode }
@@ -348,7 +321,6 @@ class AppState: ObservableObject {
         triggerCharacter = AppSettings.shared.triggerCharacter
         minTriggerLength = AppSettings.shared.minTriggerLength
         inlineTriggerEnabled = AppSettings.shared.inlineTriggerEnabled
-        numberShortcutEnabled = AppSettings.shared.numberShortcutEnabled
         inlinePanelOpenMode = AppSettings.shared.inlinePanelOpenMode
         inlineSuggestionLayout = AppSettings.shared.inlineSuggestionLayout
         popupTheme = AppSettings.shared.popupTheme
@@ -388,7 +360,6 @@ class AppState: ObservableObject {
 struct SuggestionItem: Identifiable {
     let id = UUID()
     let emoji: Emoji
-    let shortcutIndex: Int?
 }
 
 extension Emoji: Identifiable {

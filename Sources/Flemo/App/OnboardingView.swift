@@ -357,10 +357,7 @@ struct OnboardingView: View {
         return emojis.enumerated().map { offset, emoji in
             InlineSuggestionEntry(
                 absoluteIndex: offset,
-                item: SuggestionItem(
-                    emoji: emoji,
-                    shortcutIndex: appState.numberShortcutEnabled ? offset : nil
-                )
+                item: SuggestionItem(emoji: emoji)
             )
         }
     }

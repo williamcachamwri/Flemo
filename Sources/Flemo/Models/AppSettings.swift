@@ -20,11 +20,6 @@ class AppSettings {
         set { current.inlineTriggerEnabled = newValue; persist() }
     }
 
-    var numberShortcutEnabled: Bool {
-        get { current.numberShortcutEnabled }
-        set { current.numberShortcutEnabled = newValue; persist() }
-    }
-
     var emojiBoardShortcut: ShortcutKey {
         get { current.emojiBoardShortcut }
         set { current.emojiBoardShortcut = newValue; persist() }
@@ -70,7 +65,6 @@ class AppSettings {
                 triggerCharacter: "`",
                 minTriggerLength: 2,
                 inlineTriggerEnabled: true,
-                numberShortcutEnabled: true,
                 emojiBoardShortcut: ShortcutKey(keyCode: 0x00, modifiers: 0x0100),
                 inlinePanelOpenMode: .recents,
                 inlineSuggestionLayout: .sleek,
@@ -89,7 +83,6 @@ class AppSettings {
             triggerCharacter: "`",
             minTriggerLength: 2,
             inlineTriggerEnabled: true,
-            numberShortcutEnabled: true,
             emojiBoardShortcut: ShortcutKey(keyCode: 0x00, modifiers: 0x0100),
             inlinePanelOpenMode: .recents,
             inlineSuggestionLayout: .sleek,
