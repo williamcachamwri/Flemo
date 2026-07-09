@@ -1,12 +1,13 @@
-import SwiftUI
+import Cocoa
 
 @main
-struct EmojiGFastApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+enum EmojiGFastApp {
+    private static let appDelegate = AppDelegate()
 
-    var body: some Scene {
-        Settings {
-            SettingsView()
-        }
+    static func main() {
+        let app = NSApplication.shared
+        app.setActivationPolicy(.accessory)
+        app.delegate = appDelegate
+        app.run()
     }
 }

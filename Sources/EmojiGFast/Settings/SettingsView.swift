@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 private enum SettingsPane: String, CaseIterable, Identifiable {
@@ -53,40 +54,35 @@ struct SettingsView: View {
 
             content
         }
-        .frame(minWidth: 860, minHeight: 580)
+        .frame(width: 896, height: 760)
         .background(SettingsColors.content)
         .preferredColorScheme(.dark)
     }
 
     private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 9) {
-                WindowDot(color: Color(red: 1.0, green: 0.28, blue: 0.32))
-                WindowDot(color: Color(red: 1.0, green: 0.78, blue: 0.08))
-                WindowDot(color: Color(red: 0.28, green: 0.29, blue: 0.31))
-            }
-            .padding(.top, 26)
-            .padding(.leading, 22)
-
-            VStack(spacing: 7) {
-                ForEach(SettingsPane.allCases) { pane in
-                    SidebarRow(
-                        pane: pane,
-                        isSelected: selectedPane == pane
-                    ) {
-                        selectedPane = pane
+        ZStack(alignment: .topTrailing) {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(spacing: 7) {
+                    ForEach(SettingsPane.allCases) { pane in
+                        SidebarRow(
+                            pane: pane,
+                            isSelected: selectedPane == pane
+                        ) {
+                            selectedPane = pane
+                        }
                     }
                 }
-            }
-            .padding(.top, 34)
-            .padding(.horizontal, 14)
-
-            Spacer()
-            PermissionCompactStatus()
+                .padding(.top, 84)
                 .padding(.horizontal, 14)
-                .padding(.bottom, 18)
+
+                Spacer()
+            }
+
+            SidebarTopButton()
+                .padding(.top, 18)
+                .padding(.trailing, 14)
         }
-        .frame(width: 238)
+        .frame(width: 270)
         .background(SettingsColors.sidebar)
     }
 
@@ -94,9 +90,9 @@ struct SettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 Text(selectedPane.title)
-                    .font(.system(size: 25, weight: .bold))
+                    .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(SettingsColors.primaryText)
-                    .padding(.top, 24)
+                    .padding(.top, 30)
 
                 switch selectedPane {
                 case .general:
@@ -111,8 +107,9 @@ struct SettingsView: View {
                     AboutPane()
                 }
             }
-            .padding(.horizontal, 34)
+            .padding(.horizontal, 32)
             .padding(.bottom, 34)
+            .frame(maxWidth: 575, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(SettingsColors.content)
@@ -120,38 +117,31 @@ struct SettingsView: View {
 }
 
 private struct GeneralPane: View {
-    @ObservedObject private var permissions = AccessibilityPermissionManager.shared
+    @ObservedObject private var launchAtLogin = LaunchAtLoginManager.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             SettingsGroup {
-                SettingsRow(title: "Accessibility") {
-                    StatusPill(isOn: permissions.accessibilityGranted)
-                }
-
-                SettingsRow(title: "Input Monitoring") {
-                    StatusPill(isOn: permissions.inputMonitoringGranted)
-                }
-
-                SettingsRow(title: "Permissions") {
-                    HStack(spacing: 10) {
-                        ActionButton(title: "Refresh", systemImage: "arrow.clockwise") {
-                            permissions.refreshStatus()
-                        }
-                        ActionButton(title: "Open Guide", systemImage: "lock.shield") {
-                            permissions.showPermissionGuide()
-                        }
-                    }
+                SettingsRow(title: "Launch at login") {
+                    Toggle("", isOn: Binding(
+                        get: { launchAtLogin.isEnabled },
+                        set: { launchAtLogin.setEnabled($0) }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
                 }
             }
 
             SettingsGroup {
-                SettingsRow(title: "Local usage ranking") {
-                    ActionButton(title: "Reset", systemImage: "arrow.counterclockwise", role: .destructive) {
-                        FrequencyTracker.shared.resetAll()
+                SettingsRow(title: "Searchable keywords and favorites") {
+                    ActionButton(title: "Customize...", systemImage: "slider.horizontal.3") {
+                        (NSApplication.shared.delegate as? AppDelegate)?.toggleEmojiBoard()
                     }
                 }
             }
+        }
+        .task {
+            launchAtLogin.refresh()
         }
     }
 }
@@ -358,14 +348,36 @@ private struct SidebarRow: View {
 
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 10)
-            .frame(height: 46)
+            .padding(.horizontal, 9)
+            .frame(height: 38)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(isSelected ? SettingsColors.selected : Color.clear)
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct SidebarTopButton: View {
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [Color(red: 0.27, green: 0.29, blue: 0.30), Color(red: 0.20, green: 0.21, blue: 0.22)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(Circle().stroke(Color.white.opacity(0.14), lineWidth: 1))
+                .shadow(color: Color.black.opacity(0.35), radius: 5, y: 1)
+
+            Image(systemName: "sidebar.left")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Color.white.opacity(0.78))
+        }
+        .frame(width: 44, height: 44)
     }
 }
 
@@ -381,7 +393,7 @@ private struct IconTile: View {
                 .font(.system(size: 17, weight: .bold))
                 .foregroundStyle(.white)
         }
-        .frame(width: 28, height: 28)
+        .frame(width: 27, height: 27)
     }
 }
 
@@ -392,6 +404,7 @@ private struct SettingsGroup<Content: View>: View {
         VStack(spacing: 0) {
             content
         }
+        .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(SettingsColors.group)
@@ -417,8 +430,9 @@ private struct SettingsRow<Trailing: View>: View {
             Spacer(minLength: 16)
             trailing
         }
-        .padding(.horizontal, 18)
-        .frame(minHeight: 58)
+        .padding(.horizontal, 16)
+        .frame(height: 48)
+        .frame(maxWidth: .infinity)
         .rowDivider()
     }
 }
@@ -511,66 +525,6 @@ private struct InlinePreview: View {
     }
 }
 
-private struct PermissionCompactStatus: View {
-    @ObservedObject private var permissions = AccessibilityPermissionManager.shared
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            CompactStatusLine(title: "Accessibility", isOn: permissions.accessibilityGranted)
-            CompactStatusLine(title: "Input Monitoring", isOn: permissions.inputMonitoringGranted)
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.045))
-        )
-    }
-}
-
-private struct CompactStatusLine: View {
-    let title: String
-    let isOn: Bool
-
-    var body: some View {
-        HStack(spacing: 7) {
-            StatusDot(isOn: isOn)
-            Text(title)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(SettingsColors.secondaryText)
-            Spacer(minLength: 0)
-        }
-    }
-}
-
-private struct StatusPill: View {
-    let isOn: Bool
-
-    var body: some View {
-        HStack(spacing: 7) {
-            StatusDot(isOn: isOn)
-            Text(isOn ? "Granted" : "Missing")
-                .font(.system(size: 13, weight: .semibold))
-        }
-        .foregroundStyle(isOn ? SettingsColors.success : SettingsColors.warning)
-        .padding(.horizontal, 12)
-        .frame(height: 32)
-        .background(
-            Capsule(style: .continuous)
-                .fill((isOn ? SettingsColors.success : SettingsColors.warning).opacity(0.14))
-        )
-    }
-}
-
-private struct StatusDot: View {
-    let isOn: Bool
-
-    var body: some View {
-        Circle()
-            .fill(isOn ? SettingsColors.success : SettingsColors.warning)
-            .frame(width: 8, height: 8)
-    }
-}
-
 private struct ActionButton: View {
     enum Role {
         case normal
@@ -585,30 +539,20 @@ private struct ActionButton: View {
     var body: some View {
         Button(action: action) {
             Label(title, systemImage: systemImage)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(role == .destructive ? Color(red: 1.0, green: 0.42, blue: 0.38) : SettingsColors.primaryText)
-                .padding(.horizontal, 13)
-                .frame(height: 34)
+                .padding(.horizontal, 18)
+                .frame(height: 40)
                 .background(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    Capsule(style: .continuous)
                         .fill(SettingsColors.control)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    Capsule(style: .continuous)
                         .stroke(SettingsColors.stroke, lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)
-    }
-}
-
-private struct WindowDot: View {
-    let color: Color
-
-    var body: some View {
-        Circle()
-            .fill(color)
-            .frame(width: 16, height: 16)
     }
 }
 
@@ -624,15 +568,15 @@ private extension View {
 }
 
 private enum SettingsColors {
-    static let sidebar = Color(red: 0.135, green: 0.145, blue: 0.158)
-    static let content = Color(red: 0.105, green: 0.110, blue: 0.120)
-    static let group = Color(red: 0.112, green: 0.118, blue: 0.128)
-    static let control = Color(red: 0.190, green: 0.198, blue: 0.210)
-    static let selected = Color(red: 0.205, green: 0.210, blue: 0.225)
-    static let stroke = Color.white.opacity(0.18)
-    static let divider = Color.white.opacity(0.10)
+    static let sidebar = Color(red: 0.132, green: 0.136, blue: 0.146)
+    static let content = Color(red: 0.103, green: 0.105, blue: 0.112)
+    static let group = Color(red: 0.108, green: 0.110, blue: 0.118)
+    static let control = Color(red: 0.270, green: 0.274, blue: 0.286)
+    static let selected = Color(red: 0.205, green: 0.206, blue: 0.216)
+    static let stroke = Color.white.opacity(0.17)
+    static let divider = Color.white.opacity(0.09)
     static let primaryText = Color.white.opacity(0.92)
-    static let secondaryText = Color.white.opacity(0.62)
+    static let secondaryText = Color.white.opacity(0.58)
     static let success = Color(red: 0.27, green: 0.87, blue: 0.42)
     static let warning = Color(red: 1.00, green: 0.66, blue: 0.20)
 }

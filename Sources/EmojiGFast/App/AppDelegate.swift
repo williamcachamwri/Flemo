@@ -201,12 +201,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func openSettings() {
+        NSApplication.shared.activate(ignoringOtherApps: true)
         if let w = settingsWindow, w.isVisible { w.makeKeyAndOrderFront(nil); return }
         let w = NSWindow(contentViewController: NSHostingController(rootView: SettingsView()))
-        w.title = "Settings"
-        w.styleMask = [.titled, .closable, .resizable, .miniaturizable]
-        w.setContentSize(NSSize(width: 900, height: 620))
-        w.minSize = NSSize(width: 860, height: 580)
+        w.title = ""
+        w.styleMask = [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView]
+        w.titleVisibility = .hidden
+        w.titlebarAppearsTransparent = true
+        if #available(macOS 11.0, *) {
+            w.titlebarSeparatorStyle = .none
+        }
+        w.isMovableByWindowBackground = true
+        w.backgroundColor = NSColor(red: 0.105, green: 0.105, blue: 0.112, alpha: 1)
+        w.setContentSize(NSSize(width: 896, height: 760))
+        w.minSize = NSSize(width: 860, height: 620)
         w.makeKeyAndOrderFront(nil); w.center()
         settingsWindow = w
     }
