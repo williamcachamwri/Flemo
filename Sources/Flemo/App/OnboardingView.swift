@@ -5,40 +5,29 @@ import SwiftUI
 struct OnboardingView: View {
     @StateObject private var permissions = AccessibilityPermissionManager.shared
     @ObservedObject private var appState = AppState.shared
-    @State private var testInput = "`cat"
+    @State private var step = 0
+    @State private var testInput = ""
     @State private var isAnimating = false
     @State private var selectedIndex = 0
 
+    private let totalSteps = 3
     private let statusTimer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ZStack {
             OnboardingMaterialView()
-            animatedBackdrop
+            ambientGlow
 
             VStack(spacing: 0) {
-                header
-
-                HStack(spacing: 18) {
-                    heroPanel
-                    permissionPanel
-                }
-                .padding(.horizontal, 22)
-                .padding(.top, 10)
-
-                testPanel
-                    .padding(.horizontal, 22)
-                    .padding(.top, 16)
-
-                Spacer(minLength: 14)
-
-                footer
+                topBar
+                stepContent
+                navigation
             }
         }
         .frame(width: 660, height: 520)
         .onAppear {
             permissions.refreshStatus()
-            withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) {
+            withAnimation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true)) {
                 isAnimating = true
             }
         }
@@ -47,148 +36,183 @@ struct OnboardingView: View {
         }
     }
 
-    private var header: some View {
-        HStack(spacing: 12) {
-            OnboardingLogoImage(size: 30)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Flemo")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                Text("Inline emoji that follows your typing.")
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary.opacity(0.72))
-            }
+    // MARK: Top bar
 
-            Spacer()
-
-            Button {
-                closeOnboarding()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.secondary)
-                    .frame(width: 28, height: 28)
-                    .background(Circle().fill(Color.secondary.opacity(0.12)))
+    private var topBar: some View {
+        ZStack {
+            stepIndicator
+            HStack {
+                Spacer()
+                closeButton
             }
-            .buttonStyle(.plain)
-            .keyboardShortcut(.escape, modifiers: [])
         }
         .padding(.horizontal, 22)
         .padding(.top, 20)
-        .padding(.bottom, 12)
+        .padding(.bottom, 8)
     }
 
-    private var heroPanel: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color.black.opacity(0.10))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.14), lineWidth: 1)
-                )
-
-            TimelineView(.animation) { context in
-                let time = context.date.timeIntervalSinceReferenceDate
-                ZStack {
-                    ForEach(Array(heroEmojis.enumerated()), id: \.element.character) { index, emoji in
-                        Text(emoji.character)
-                            .font(.system(size: 24))
-                            .rotationEffect(.degrees(time * 28 + Double(index * 32)))
-                            .offset(
-                                x: cos(time + Double(index)) * 86,
-                                y: sin(time * 0.9 + Double(index)) * 42
-                            )
-                            .opacity(0.18)
-                    }
-                }
-            }
-
-            VStack(spacing: 18) {
-                InlineSuggestionPillView(
-                    entries: previewEntries,
-                    selectedIndex: selectedIndex,
-                    layout: appState.inlineSuggestionLayout,
-                    label: previewLabel,
-                    theme: appState.popupTheme,
-                    baseHeight: 54,
-                    emojiHandler: { _ in }
-                )
-                .offset(y: isAnimating ? -3 : 3)
-
-                Text(previewLabel)
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
-                    .foregroundColor(.white.opacity(0.90))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 7)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(Color.white.opacity(0.10))
-                    )
+    private var stepIndicator: some View {
+        HStack(spacing: 7) {
+            ForEach(0..<totalSteps, id: \.self) { index in
+                Capsule(style: .continuous)
+                    .fill(index == step ? Color.accentColor : Color.secondary.opacity(0.22))
+                    .frame(width: index == step ? 22 : 6, height: 6)
+                    .animation(.spring(response: 0.34, dampingFraction: 0.82), value: step)
             }
         }
-        .frame(width: 298, height: 210)
     }
 
-    private var permissionPanel: some View {
-        VStack(spacing: 10) {
-            PermissionCard(
-                icon: "lock.shield",
-                title: "Accessibility",
-                detail: "Cursor bounds and focused text",
-                granted: permissions.accessibilityGranted
-            ) {
-                permissions.requestAccessibility()
-            }
-
-            PermissionCard(
-                icon: "keyboard.badge.eye",
-                title: "Input Monitoring",
-                detail: "Trigger text and arrow keys",
-                granted: permissions.inputMonitoringGranted
-            ) {
-                permissions.requestInputMonitoring()
-            }
-
-            Button {
-                permissions.showPermissionGuide()
-            } label: {
-                HStack {
-                    Image(systemName: "slider.horizontal.3")
-                    Text("Open Permission Guide")
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .bold))
-                }
-                .font(.system(size: 12, weight: .bold, design: .rounded))
-                .foregroundColor(.primary.opacity(0.9))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 11)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.secondary.opacity(0.11))
-                )
-            }
-            .buttonStyle(.plain)
+    private var closeButton: some View {
+        Button {
+            closeOnboarding()
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(.secondary)
+                .frame(width: 26, height: 26)
+                .background(Circle().fill(Color.secondary.opacity(0.12)))
         }
-        .frame(maxWidth: .infinity)
+        .buttonStyle(.plain)
+        .keyboardShortcut(.escape, modifiers: [])
     }
 
-    private var testPanel: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Try it here")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                Spacer()
-                Text("Real search preview")
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+    // MARK: Step content
+
+    @ViewBuilder
+    private var stepContent: some View {
+        currentStep
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, 48)
+            .id(step)
+            .transition(
+                .asymmetric(
+                    insertion: .opacity.combined(with: .move(edge: .trailing)),
+                    removal: .opacity.combined(with: .move(edge: .leading))
+                )
+            )
+    }
+
+    @ViewBuilder
+    private var currentStep: some View {
+        switch step {
+        case 0: welcomeStep
+        case 1: permissionsStep
+        default: tryItStep
+        }
+    }
+
+    private var welcomeStep: some View {
+        VStack(spacing: 26) {
+            WelcomeMark()
+
+            VStack(spacing: 9) {
+                Text("Flemo")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                Text("Inline emoji that follows your typing.")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
                     .foregroundColor(.secondary.opacity(0.72))
+                    .multilineTextAlignment(.center)
             }
 
-            HStack(spacing: 12) {
+            triggerHint
+        }
+    }
+
+    private var triggerHint: some View {
+        HStack(spacing: 8) {
+            triggerKey
+            Text("type a word to summon emoji anywhere")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundColor(.secondary.opacity(0.68))
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 9)
+        .background(
+            Capsule(style: .continuous)
+                .fill(Color.secondary.opacity(0.10))
+        )
+    }
+
+    private var triggerKey: some View {
+        Text(appState.triggerCharacter)
+            .font(.system(size: 14, weight: .bold, design: .monospaced))
+            .foregroundColor(.primary.opacity(0.9))
+            .frame(width: 24, height: 24)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.black.opacity(0.18))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
+            )
+    }
+
+    private var permissionsStep: some View {
+        VStack(spacing: 18) {
+            VStack(spacing: 8) {
+                Text("Grant access")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                Text("Flemo needs these to read your typing and place suggestions inline.")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.7))
+                    .multilineTextAlignment(.center)
+            }
+
+            VStack(spacing: 10) {
+                PermissionCard(
+                    icon: "lock.shield",
+                    title: "Accessibility",
+                    detail: "Cursor bounds and focused text",
+                    granted: permissions.accessibilityGranted
+                ) {
+                    permissions.requestAccessibility()
+                }
+
+                PermissionCard(
+                    icon: "keyboard.badge.eye",
+                    title: "Input Monitoring",
+                    detail: "Trigger text and arrow keys",
+                    granted: permissions.inputMonitoringGranted
+                ) {
+                    permissions.requestInputMonitoring()
+                }
+            }
+            .frame(maxWidth: 360)
+
+            if !permissions.accessibilityGranted || !permissions.inputMonitoringGranted {
+                Button {
+                    permissions.showPermissionGuide()
+                } label: {
+                    Text("Not sure? Open the permission guide")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(.accentColor)
+                }
+                .buttonStyle(.plain)
+            } else {
+                Label("All set — you can continue.", systemImage: "checkmark.circle.fill")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundColor(.green)
+            }
+        }
+    }
+
+    private var tryItStep: some View {
+        VStack(spacing: 20) {
+            VStack(spacing: 8) {
+                Text("Try it out")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                Text("Type below — suggestions update live.")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.7))
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
                 TextField("Type \(appState.triggerCharacter)cat", text: $testInput)
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .textFieldStyle(.plain)
                     .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 11)
                     .background(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(Color.black.opacity(0.16))
@@ -213,86 +237,99 @@ struct OnboardingView: View {
                     }
                 )
             }
+            .padding(16)
+            .frame(maxWidth: 380)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.black.opacity(0.08))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.white.opacity(0.14), lineWidth: 1)
+            )
+
+            Label("Tab inserts · arrows move · Esc dismisses", systemImage: "sparkle.magnifyingglass")
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundColor(.secondary.opacity(0.68))
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.black.opacity(0.08))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
-        )
     }
 
-    private var footer: some View {
+    // MARK: Navigation
+
+    private var navigation: some View {
         HStack {
-            Label("Tab inserts, arrows move, Esc dismisses.", systemImage: "sparkle.magnifyingglass")
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundColor(.secondary.opacity(0.72))
-
+            backButton
             Spacer()
+            primaryButton
+        }
+        .padding(.horizontal, 22)
+        .padding(.bottom, 20)
+        .padding(.top, 4)
+    }
 
+    @ViewBuilder
+    private var backButton: some View {
+        if step > 0 {
             Button {
-                closeOnboarding()
+                goBack()
             } label: {
-                Text("Get Started")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 18)
+                Label("Back", systemImage: "chevron.left")
+                    .labelStyle(.titleAndIcon)
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 14)
                     .padding(.vertical, 9)
                     .background(
                         Capsule(style: .continuous)
-                            .fill(Color.accentColor)
+                            .fill(Color.secondary.opacity(0.10))
                     )
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 22)
-        .padding(.bottom, 20)
     }
 
-    private var animatedBackdrop: some View {
+    private var primaryButton: some View {
+        Button {
+            advance()
+        } label: {
+            HStack(spacing: 6) {
+                Text(step == totalSteps - 1 ? "Finish" : "Continue")
+                Image(systemName: step == totalSteps - 1 ? "checkmark" : "arrow.right")
+                    .font(.system(size: 11, weight: .bold))
+            }
+            .font(.system(size: 13, weight: .bold, design: .rounded))
+            .foregroundColor(.white)
+            .padding(.horizontal, 22)
+            .padding(.vertical, 10)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color.accentColor)
+            )
+        }
+        .buttonStyle(.plain)
+        .keyboardShortcut(.return, modifiers: [])
+    }
+
+    // MARK: Ambient
+
+    private var ambientGlow: some View {
         ZStack {
             Circle()
                 .fill(Color.accentColor.opacity(0.12))
-                .frame(width: 230, height: 230)
-                .blur(radius: 44)
-                .offset(x: isAnimating ? -260 : -210, y: isAnimating ? -140 : -110)
+                .frame(width: 240, height: 240)
+                .blur(radius: 50)
+                .offset(x: isAnimating ? -200 : -160, y: isAnimating ? -150 : -120)
 
             Circle()
                 .fill(Color.cyan.opacity(0.10))
-                .frame(width: 210, height: 210)
-                .blur(radius: 42)
-                .offset(x: isAnimating ? 250 : 210, y: isAnimating ? 170 : 130)
+                .frame(width: 220, height: 220)
+                .blur(radius: 48)
+                .offset(x: isAnimating ? 200 : 160, y: isAnimating ? 160 : 130)
         }
+        .allowsHitTesting(false)
     }
 
-    private var heroEmojis: [Emoji] {
-        EmojiSearchEngine.shared.search(keyword: "sparkle", maxResults: 6)
-    }
-
-    private var previewKeyword: String {
-        "cat"
-    }
-
-    private var previewLabel: String {
-        appState.triggerCharacter + previewKeyword
-    }
-
-    private var previewEntries: [InlineSuggestionEntry] {
-        EmojiSearchEngine.shared.search(keyword: previewKeyword, maxResults: AppState.inlineVisibleCount)
-            .enumerated()
-            .map { offset, emoji in
-                InlineSuggestionEntry(
-                    absoluteIndex: offset,
-                    item: SuggestionItem(
-                        emoji: emoji,
-                        shortcutIndex: appState.numberShortcutEnabled ? offset : nil
-                    )
-                )
-            }
-    }
+    // MARK: Search helpers
 
     private var extractedKeyword: String {
         guard let trigger = appState.triggerCharacter.first,
@@ -328,27 +365,54 @@ struct OnboardingView: View {
         }
     }
 
+    // MARK: Actions
+
+    private func advance() {
+        if step < totalSteps - 1 {
+            withAnimation(.spring(response: 0.36, dampingFraction: 0.84)) {
+                step += 1
+            }
+        } else {
+            closeOnboarding()
+        }
+    }
+
+    private func goBack() {
+        guard step > 0 else { return }
+        withAnimation(.spring(response: 0.36, dampingFraction: 0.84)) {
+            step -= 1
+        }
+    }
+
     private func closeOnboarding() {
         NSApplication.shared.keyWindow?.close()
     }
 }
 
-private struct OnboardingLogoImage: View {
-    let size: CGFloat
+// MARK: - Welcome mark
 
+private struct WelcomeMark: View {
     var body: some View {
-        Image(systemName: "face.smiling.fill")
-            .font(.system(size: size * 0.72, weight: .bold, design: .rounded))
-            .foregroundStyle(
-                LinearGradient(
-                    colors: [.accentColor, .cyan],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+        ZStack {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [.accentColor, .cyan],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
                 )
-            )
-            .frame(width: size, height: size)
+                .shadow(color: Color.accentColor.opacity(0.45), radius: 22, y: 8)
+
+            Image(systemName: "face.smiling.fill")
+                .font(.system(size: 36, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+        }
+        .frame(width: 76, height: 76)
     }
 }
+
+// MARK: - Permission card
 
 private struct PermissionCard: View {
     let icon: String
@@ -386,7 +450,7 @@ private struct PermissionCard: View {
                     .padding(.vertical, 6)
                     .background(
                         Capsule(style: .continuous)
-                            .fill(granted ? Color.green.opacity(0.12) : Color.accentColor)
+                            .fill(granted ? Color.green.opacity(0.14) : Color.accentColor)
                     )
             }
             .buttonStyle(.plain)
@@ -402,6 +466,8 @@ private struct PermissionCard: View {
         )
     }
 }
+
+// MARK: - Vibrancy material
 
 private struct OnboardingMaterialView: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {
