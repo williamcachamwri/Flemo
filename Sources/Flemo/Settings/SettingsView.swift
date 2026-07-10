@@ -1040,13 +1040,13 @@ private struct AboutSettingsPane: View {
             Divider().background(Color.white.opacity(0.06))
 
             ActionRow(
-                icon: "arrow.down.circle",
-                title: "Check for Updates",
-                subtitle: updater.latestRelease.map { "Latest: \($0.version)" } ?? "Look for a newer version",
-                label: updater.isLoading ? "..." : "Check"
+                icon: "doc.text",
+                title: "Release Notes",
+                subtitle: updater.latestRelease.map { "Latest: v\($0.version)" } ?? "Browse version history",
+                label: "View"
             ) {
-                updater.check()
                 showingUpdateSheet = true
+                updater.check()
             }
 
             Divider().background(Color.white.opacity(0.06))
