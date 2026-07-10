@@ -102,20 +102,7 @@ struct OnboardingView: View {
     }
 
     private var welcomeStep: some View {
-        VStack(spacing: 26) {
-            WelcomeMark()
-
-            VStack(spacing: 9) {
-                Text("Flemo")
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                Text("Inline emoji that follows your typing.")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary.opacity(0.72))
-                    .multilineTextAlignment(.center)
-            }
-
-            triggerHint
-        }
+        EmojiBurstView()
     }
 
     private var triggerHint: some View {
@@ -392,6 +379,117 @@ struct OnboardingView: View {
 
     private func closeOnboarding() {
         NSApplication.shared.keyWindow?.close()
+    }
+}
+
+// MARK: - Emoji burst welcome
+
+private struct EmojiBurstView: View {
+    @State private var burstPhase = false
+    @State private var textPhase = false
+    @ObservedObject private var appState = AppState.shared
+
+    private let emojis: [(String, CGFloat, CGFloat)] = [
+        ("😀", -120, -80), ("😂", -72, -96), ("😍", 0, -110),
+        ("🤩", 72, -96), ("😎", 120, -80), ("🔥", 140, -36),
+        ("✨", 130, 10), ("🚀", 96, 56), ("🎉", 40, 82),
+        ("❤️", -40, 82), ("👍", -96, 56), ("🙏", -130, 10),
+        ("🐱", -140, -36), ("💀", -90, -48), ("🌟", 90, -48),
+        ("💡", 50, -90),
+    ]
+
+    var body: some View {
+        GeometryReader { geo in
+            let h = geo.size.height
+
+            ZStack {
+                ForEach(Array(emojis.enumerated()), id: \.offset) { i, item in
+                    let (char, ox, oy) = item
+                    let delay = 0.04 * Double(i)
+                    let rot = Double.random(in: -20...20)
+                    let size = CGFloat.random(in: 22...28)
+
+                    BurstEmoji(
+                        character: char,
+                        fontSize: size,
+                        offsetX: ox,
+                        offsetY: oy,
+                        rotation: rot,
+                        delay: delay,
+                        activated: burstPhase
+                    )
+                }
+
+                WelcomeMark()
+                    .scaleEffect(burstPhase ? 1 : 0.92)
+                    .opacity(burstPhase ? 1 : 0)
+            }
+
+            VStack(spacing: 9) {
+                Spacer().frame(height: h * 0.68)
+                Text("Flemo")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                Text("Inline emoji that follows your typing.")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.72))
+                    .multilineTextAlignment(.center)
+                Spacer().frame(height: 6)
+                HStack(spacing: 8) {
+                    Text(appState.triggerCharacter)
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundColor(.primary.opacity(0.9))
+                        .frame(width: 24, height: 24)
+                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.black.opacity(0.18)))
+                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.16)))
+                    Text("type a word to summon emoji anywhere")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundColor(.secondary.opacity(0.68))
+                }
+                .padding(.horizontal, 16).padding(.vertical, 9)
+                .background(Capsule().fill(Color.secondary.opacity(0.10)))
+            }
+            .opacity(textPhase ? 1 : 0)
+            .frame(maxWidth: .infinity)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.72)) {
+                burstPhase = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                withAnimation(.easeOut(duration: 0.4)) {
+                    textPhase = true
+                }
+            }
+        }
+    }
+}
+
+private struct BurstEmoji: View {
+    let character: String
+    let fontSize: CGFloat
+    let offsetX: CGFloat
+    let offsetY: CGFloat
+    let rotation: Double
+    let delay: Double
+    let activated: Bool
+
+    @State private var localPhase = false
+
+    var body: some View {
+        Text(character)
+            .font(.system(size: fontSize))
+            .rotationEffect(.degrees(localPhase ? rotation : 0))
+            .scaleEffect(localPhase ? 1 : 0.01)
+            .offset(x: localPhase ? offsetX : 0, y: localPhase ? offsetY : 0)
+            .opacity(localPhase ? 0.92 : 0)
+            .onChange(of: activated) { _, newVal in
+                guard newVal else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    withAnimation(.spring(response: 0.55, dampingFraction: 0.65)) {
+                        localPhase = true
+                    }
+                }
+            }
     }
 }
 
