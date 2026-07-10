@@ -251,7 +251,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if let w = emojiBoardWindow, w.isVisible { w.close(); emojiBoardWindow = nil; updateDockPolicy(); return }
         NSApplication.shared.activate(ignoringOtherApps: true)
         let v = EmojiBoardView { [weak self] e in self?.handleEmojiSelected(e) }
-        let size = NSSize(width: 620, height: 520)
+        let size = NSSize(width: 680, height: 540)
         let w = KeyableWindow(
             contentRect: NSRect(origin: .zero, size: size),
             styleMask: [.borderless, .fullSizeContentView],

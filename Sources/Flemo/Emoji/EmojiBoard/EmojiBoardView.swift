@@ -13,7 +13,7 @@ struct EmojiBoardView: View {
     var onSelect: (Emoji) -> Void
 
     private let columns = [
-        GridItem(.adaptive(minimum: 42, maximum: 48), spacing: 6)
+        GridItem(.adaptive(minimum: 46, maximum: 52), spacing: 8)
     ]
 
     private var categories: [String] {
@@ -60,6 +60,12 @@ struct EmojiBoardView: View {
         return displayEmojis.filter { $0.category == selectedCategory }
     }
 
+    private var activeTitle: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? title(for: selectedCategory)
+            : "Search Results"
+    }
+
     var body: some View {
         ZStack {
             EmojiBoardMaterialView()
@@ -68,7 +74,7 @@ struct EmojiBoardView: View {
                         .stroke(
                             LinearGradient(
                                 gradient: Gradient(colors: [
-                                    Color.white.opacity(0.22),
+                                    Color.white.opacity(0.24),
                                     Color.white.opacity(0.06)
                                 ]),
                                 startPoint: .topLeading,
@@ -81,13 +87,14 @@ struct EmojiBoardView: View {
             HStack(spacing: 0) {
                 sidebar
 
-                Divider()
-                    .background(Color.white.opacity(0.06))
+                Rectangle()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(width: 1)
 
                 content
             }
         }
-        .frame(width: 620, height: 520)
+        .frame(width: 680, height: 540)
         .onAppear { rebuildCounts() }
         .onChange(of: appState.personSkinTone) { _, _ in rebuildCounts() }
         .onChange(of: appState.manSkinTone) { _, _ in rebuildCounts() }
@@ -109,47 +116,96 @@ struct EmojiBoardView: View {
 
     private var sidebar: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Image(systemName: "face.smiling.fill")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundStyle(LinearGradient(colors: [.accentColor, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 22, height: 22)
+            sidebarHeader
 
-                Text("Emoji")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-            }
-            .padding(.horizontal, 14)
-            .padding(.top, 18)
-            .padding(.bottom, 14)
-
-            Divider()
-                .background(Color.white.opacity(0.06))
-                .padding(.bottom, 8)
+            Rectangle()
+                .fill(Color.white.opacity(0.06))
+                .frame(height: 1)
+                .padding(.bottom, 10)
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 2) {
+                VStack(spacing: 4) {
                     ForEach(categories, id: \.self) { category in
                         CategoryNavItem(
                             icon: icon(for: category),
-                            title: shortTitle(for: category),
+                            title: title(for: category),
                             count: count(for: category),
                             isSelected: selectedCategory == category && searchText.isEmpty
                         ) {
-                            withAnimation(.spring(response: 0.25, dampingFraction: 0.82)) {
+                            withAnimation(.spring(response: 0.28, dampingFraction: 0.84)) {
                                 selectedCategory = category
                                 searchText = ""
+                                hoveredEmoji = nil
                             }
                         }
                     }
                 }
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 10)
+                .padding(.bottom, 12)
+            }
+
+            Spacer(minLength: 0)
+
+            SidebarMetricPill(
+                icon: "star.fill",
+                value: "\(count(for: "Favorites"))",
+                label: "Favorites"
+            )
+            .padding(.horizontal, 12)
+            .padding(.bottom, 14)
+        }
+        .frame(width: 168)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color.secondary.opacity(0.065),
+                    Color.black.opacity(0.035)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+    }
+
+    private var sidebarHeader: some View {
+        HStack(spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.accentColor.opacity(0.30),
+                                Color.cyan.opacity(0.22)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                Image(systemName: "face.smiling.fill")
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+            }
+            .frame(width: 32, height: 32)
+            .overlay(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
+            )
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Flemo")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+                Text("Emoji Library")
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.62))
             }
 
             Spacer(minLength: 0)
         }
-        .frame(width: 154)
-        .background(Color.secondary.opacity(0.04))
+        .padding(.horizontal, 14)
+        .padding(.top, 16)
+        .padding(.bottom, 14)
     }
 
     private var content: some View {
@@ -162,75 +218,58 @@ struct EmojiBoardView: View {
                         withAnimation(.easeInOut(duration: 0.2)) { selectedEmoji = nil }
                     }
                 )
-                .transition(.opacity)
+                .transition(.opacity.combined(with: .scale(scale: 0.99)))
             } else {
                 gridContent
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var gridContent: some View {
         let results = filteredEmojis
+        let hoverAliases = hoveredEmoji.map { aliases(for: $0, limit: 4) } ?? []
+
         return VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                SearchField(text: $searchText)
-
-                Button {
-                    NSApplication.shared.keyWindow?.close()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.secondary)
-                        .frame(width: 24, height: 24)
-                        .background(Circle().fill(Color.secondary.opacity(0.10)))
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .keyboardShortcut(.escape, modifiers: [])
+            BoardSearchHeader(
+                title: activeTitle,
+                subtitle: countText(results.count),
+                searchText: $searchText
+            ) {
+                NSApplication.shared.keyWindow?.close()
             }
-            .padding(.horizontal, 18)
-            .padding(.top, 16)
-            .padding(.bottom, 12)
 
-            Divider()
-                .background(Color.white.opacity(0.06))
+            Rectangle()
+                .fill(Color.white.opacity(0.06))
+                .frame(height: 1)
 
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(searchText.isEmpty ? selectedCategory : "Search Results")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                    Text("\(results.count) emoji")
-                        .font(.system(size: 11, weight: .regular, design: .rounded))
-                        .foregroundColor(.secondary.opacity(0.7))
-                }
-
-                Spacer()
-
-                if let hoveredEmoji {
-                    Text(hoveredEmoji.name)
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .foregroundColor(.secondary.opacity(0.8))
-                        .lineLimit(1)
-                        .frame(maxWidth: 180, alignment: .trailing)
-                }
-            }
+            EmojiHoverPreview(
+                emoji: hoveredEmoji,
+                aliases: hoverAliases,
+                fallbackTitle: activeTitle,
+                fallbackSubtitle: countText(results.count)
+            )
             .padding(.horizontal, 18)
             .padding(.vertical, 12)
 
             ScrollView {
-                LazyVGrid(columns: columns, spacing: 6) {
+                LazyVGrid(columns: columns, spacing: 8) {
                     ForEach(results) { emoji in
                         EmojiCell(
                             emoji: emoji,
                             isHovered: hoveredEmoji?.character == emoji.character,
                             isFavorite: customization.isFavorite(emoji.character)
                         ) {
-                            withAnimation(.easeInOut(duration: 0.2)) {
+                            withAnimation(.easeInOut(duration: 0.18)) {
                                 selectedEmoji = emoji
                             }
                         }
                         .onHover { hovering in
-                            hoveredEmoji = hovering ? emoji : (hoveredEmoji?.character == emoji.character ? nil : hoveredEmoji)
+                            withAnimation(.easeInOut(duration: 0.12)) {
+                                hoveredEmoji = hovering
+                                    ? emoji
+                                    : (hoveredEmoji?.character == emoji.character ? nil : hoveredEmoji)
+                            }
                         }
                     }
                 }
@@ -247,8 +286,13 @@ struct EmojiBoardView: View {
         return categoryCounts[category] ?? 0
     }
 
-    private func shortTitle(for category: String) -> String {
+    private func countText(_ count: Int) -> String {
+        "\(count) emoji"
+    }
+
+    private func title(for category: String) -> String {
         switch category {
+        case "All": return "All Emoji"
         case "Smileys & Emotion": return "Smileys"
         case "People & Body": return "People"
         case "Animals & Nature": return "Nature"
@@ -274,37 +318,263 @@ struct EmojiBoardView: View {
         default: return "circle.grid.2x2"
         }
     }
+
+    private func aliases(for emoji: Emoji, limit: Int) -> [String] {
+        var seen = Set<String>()
+        return (customization.customAliases(for: emoji.character) + emoji.keywords)
+            .filter { keyword in
+                let lowered = keyword.lowercased()
+                guard !seen.contains(lowered) else { return false }
+                seen.insert(lowered)
+                return true
+            }
+            .prefix(limit)
+            .map { $0 }
+    }
+}
+
+private struct BoardSearchHeader: View {
+    let title: String
+    let subtitle: String
+    @Binding var searchText: String
+    let close: () -> Void
+
+    var body: some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+
+                Text(subtitle)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.64))
+                    .lineLimit(1)
+            }
+            .frame(width: 136, alignment: .leading)
+
+            SearchField(text: $searchText)
+
+            Button(action: close) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.secondary)
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill(Color.secondary.opacity(0.10)))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut(.escape, modifiers: [])
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, 16)
+        .padding(.bottom, 12)
+    }
 }
 
 private struct SearchField: View {
     @Binding var text: String
+    @FocusState private var isFocused: Bool
+    @State private var isHovered = false
+
+    private var borderColor: Color {
+        isFocused ? Color.accentColor.opacity(0.42) : Color.white.opacity(isHovered ? 0.18 : 0.10)
+    }
 
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.secondary.opacity(0.75))
+                .foregroundColor(isFocused ? .accentColor : .secondary.opacity(0.72))
+                .frame(width: 16)
 
-            TextField("Search emoji...", text: $text)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+            TextField("Search emoji", text: $text)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .textFieldStyle(.plain)
+                .focused($isFocused)
+                .tint(.accentColor)
 
             if !text.isEmpty {
                 Button {
-                    text = ""
+                    withAnimation(.easeInOut(duration: 0.12)) { text = "" }
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.secondary.opacity(0.7))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.secondary.opacity(0.72))
                 }
                 .buttonStyle(.plain)
+                .help("Clear")
             }
         }
         .padding(.horizontal, 11)
-        .frame(height: 30)
+        .frame(height: 34)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.black.opacity(isFocused ? 0.13 : 0.09))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(borderColor, lineWidth: 1)
+        )
+        .shadow(color: Color.accentColor.opacity(isFocused ? 0.16 : 0.0), radius: 10, y: 4)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.12)) { isHovered = hovering }
+        }
+    }
+}
+
+private struct EmojiHoverPreview: View {
+    let emoji: Emoji?
+    let aliases: [String]
+    let fallbackTitle: String
+    let fallbackSubtitle: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if let emoji {
+                emojiTile(emoji)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 8) {
+                        Text(displayName(for: emoji))
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundColor(.primary.opacity(0.94))
+                            .lineLimit(1)
+
+                        Text(emoji.category)
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundColor(.secondary.opacity(0.72))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(Capsule(style: .continuous).fill(Color.secondary.opacity(0.10)))
+                    }
+
+                    HStack(spacing: 6) {
+                        usageBadge(for: emoji)
+
+                        ForEach(aliases.prefix(3), id: \.self) { alias in
+                            Text(alias)
+                                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                .foregroundColor(.secondary.opacity(0.78))
+                                .lineLimit(1)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(Capsule(style: .continuous).fill(Color.secondary.opacity(0.08)))
+                        }
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .trailing)))
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.secondary.opacity(0.10))
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.secondary.opacity(0.72))
+                }
+                .frame(width: 44, height: 44)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(fallbackTitle)
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary.opacity(0.90))
+                    Text(fallbackSubtitle)
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(.secondary.opacity(0.64))
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .frame(height: 64)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.black.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
+        .animation(.spring(response: 0.24, dampingFraction: 0.88), value: emoji?.character)
+    }
+
+    private func emojiTile(_ emoji: Emoji) -> some View {
+        let colors = EmojiColorExtractor.shared.colors(for: emoji.character)
+        return Text(emoji.character)
+            .font(.system(size: 31))
+            .frame(width: 48, height: 48)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                colors[0].opacity(0.28),
+                                colors[1].opacity(0.16),
+                                Color.white.opacity(0.05)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.white.opacity(0.14), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.18), radius: 10, y: 5)
+    }
+
+    private func usageBadge(for emoji: Emoji) -> some View {
+        let count = FrequencyTracker.shared.usageCount(for: emoji.character)
+        return Label(count == 0 ? "No uses" : "\(count) uses", systemImage: "chart.bar.fill")
+            .labelStyle(.titleAndIcon)
+            .font(.system(size: 10, weight: .bold, design: .rounded))
+            .foregroundColor(.secondary.opacity(0.72))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(Capsule(style: .continuous).fill(Color.secondary.opacity(0.08)))
+    }
+
+    private func displayName(for emoji: Emoji) -> String {
+        emoji.name
+            .split(separator: " ")
+            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            .joined(separator: " ")
+    }
+}
+
+private struct SidebarMetricPill: View {
+    let icon: String
+    let value: String
+    let label: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(.yellow.opacity(0.90))
+
+            Text(value)
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundColor(.primary.opacity(0.90))
+
+            Text(label)
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundColor(.secondary.opacity(0.64))
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(Color.secondary.opacity(0.10))
+                .fill(Color.black.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .stroke(Color.white.opacity(0.10), lineWidth: 1)
         )
     }
 }
@@ -318,38 +588,70 @@ private struct CategoryNavItem: View {
 
     @State private var isHovered = false
 
+    private var backgroundStyle: AnyShapeStyle {
+        if isSelected {
+            return AnyShapeStyle(
+                LinearGradient(
+                    colors: [
+                        Color.accentColor,
+                        Color.cyan.opacity(0.72)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+        }
+
+        return AnyShapeStyle(Color.secondary.opacity(isHovered ? 0.11 : 0.0))
+    }
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(isSelected ? .white : .secondary)
-                    .frame(width: 18)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(isSelected ? .white : .secondary.opacity(0.78))
+                    .frame(width: 22, height: 22)
+                    .background(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(Color.white.opacity(isSelected ? 0.16 : isHovered ? 0.08 : 0.04))
+                    )
 
                 Text(title)
-                    .font(.system(size: 12, weight: isSelected ? .semibold : .medium, design: .rounded))
-                    .foregroundColor(isSelected ? .white : .primary.opacity(0.85))
+                    .font(.system(size: 12, weight: isSelected ? .bold : .semibold, design: .rounded))
+                    .foregroundColor(isSelected ? .white : .primary.opacity(0.84))
                     .lineLimit(1)
 
                 Spacer(minLength: 4)
 
                 Text("\(count)")
-                    .font(.system(size: 9, weight: .medium, design: .rounded))
-                    .foregroundColor(isSelected ? .white.opacity(0.72) : .secondary.opacity(0.58))
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundColor(isSelected ? .white.opacity(0.76) : .secondary.opacity(0.58))
+                    .lineLimit(1)
+                    .frame(minWidth: 25)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color.white.opacity(isSelected ? 0.15 : isHovered ? 0.07 : 0.04))
+                    )
             }
-            .padding(.horizontal, 9)
-            .padding(.vertical, 7)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
             .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.secondary.opacity(isHovered ? 0.10 : 0.0)))
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(backgroundStyle)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .stroke(Color.white.opacity(isSelected ? 0.18 : 0.0), lineWidth: 1)
             )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .scaleEffect(isHovered && !isSelected ? 1.015 : 1)
         .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.12)) {
-                isHovered = hovering
-            }
+            withAnimation(.easeInOut(duration: 0.12)) { isHovered = hovering }
         }
     }
 }
@@ -363,26 +665,29 @@ private struct EmojiCell: View {
     var body: some View {
         Button(action: action) {
             Text(emoji.character)
-                .font(.system(size: 26))
-                .frame(width: 42, height: 42)
+                .font(.system(size: isHovered ? 29 : 27))
+                .frame(width: 46, height: 46)
                 .background(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .fill(Color.secondary.opacity(isHovered ? 0.18 : 0.08))
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.secondary.opacity(isHovered ? 0.18 : 0.075))
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .stroke(Color.white.opacity(isHovered ? 0.16 : 0.04), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Color.white.opacity(isHovered ? 0.20 : 0.05), lineWidth: 1)
                 )
                 .overlay(alignment: .topTrailing) {
                     if isFavorite {
                         Image(systemName: "star.fill")
                             .font(.system(size: 7, weight: .bold))
                             .foregroundColor(.yellow)
-                            .padding(3)
+                            .padding(4)
                     }
                 }
+                .shadow(color: .black.opacity(isHovered ? 0.22 : 0.0), radius: 9, y: 5)
         }
         .buttonStyle(.plain)
+        .scaleEffect(isHovered ? 1.06 : 1.0)
+        .zIndex(isHovered ? 1 : 0)
         .help(emoji.name)
     }
 }
