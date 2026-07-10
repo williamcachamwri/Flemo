@@ -1,6 +1,7 @@
 import Foundation
 
-struct GitHubRelease: Decodable {
+struct GitHubRelease: Decodable, Identifiable {
+    var id: String { tagName }
     let tagName: String
     let name: String
     let body: String
@@ -42,18 +43,20 @@ struct GitHubAsset: Decodable {
 final class UpdateChecker: ObservableObject {
     static let shared = UpdateChecker()
 
-    @Published var latestRelease: GitHubRelease?
+    @Published var releases: [GitHubRelease] = []
     @Published var isLoading = false
     @Published var error: String?
 
     private let repo = "williamcachamwri/Flemo"
 
+    var latestRelease: GitHubRelease? { releases.first }
+
     func check() {
         isLoading = true
         error = nil
-        latestRelease = nil
+        releases = []
 
-        guard let url = URL(string: "https://api.github.com/repos/\(repo)/releases/latest") else {
+        guard let url = URL(string: "https://api.github.com/repos/\(repo)/releases?per_page=20") else {
             error = "Invalid URL"
             isLoading = false
             return
@@ -79,8 +82,8 @@ final class UpdateChecker: ObservableObject {
                     return
                 }
                 do {
-                    let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
-                    self?.latestRelease = release
+                    let releases = try JSONDecoder().decode([GitHubRelease].self, from: data)
+                    self?.releases = releases.filter { !$0.prerelease }
                 } catch {
                     self?.error = error.localizedDescription
                 }

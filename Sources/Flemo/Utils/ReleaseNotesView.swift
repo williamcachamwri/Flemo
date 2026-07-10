@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ReleaseNotesView: View {
+    @Environment(\.dismiss) private var dismiss
     @ObservedObject private var updater = UpdateChecker.shared
 
     var body: some View {
@@ -11,10 +12,10 @@ struct ReleaseNotesView: View {
             Divider().background(Color.white.opacity(0.06))
             footer
         }
-        .frame(width: 420, height: 460)
+        .frame(width: 460, height: 520)
         .background(VisualEffectBackground())
         .onAppear {
-            if updater.latestRelease == nil {
+            if updater.releases.isEmpty {
                 updater.check()
             }
         }
@@ -26,7 +27,7 @@ struct ReleaseNotesView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Flemo")
                     .font(.system(size: 15, weight: .bold, design: .rounded))
-                Text("Inline emoji picker for macOS")
+                Text(updater.releases.isEmpty ? "Loading..." : "\(updater.releases.count) releases")
                     .font(.system(size: 11, weight: .regular, design: .rounded))
                     .foregroundColor(.secondary)
             }
@@ -48,12 +49,13 @@ struct ReleaseNotesView: View {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 28))
                     .foregroundColor(.orange)
-                Text("Could not check for updates")
+                Text("Could not load release notes")
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                 Text(error)
                     .font(.system(size: 11, design: .rounded))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
                 Button("Retry") { updater.check() }
                     .buttonStyle(.plain)
                     .font(.system(size: 12, weight: .bold, design: .rounded))
@@ -62,11 +64,16 @@ struct ReleaseNotesView: View {
             }
             .padding(20)
             Spacer()
-        } else if let release = updater.latestRelease {
+        } else if !updater.releases.isEmpty {
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 16) {
-                    versionCompare(release)
-                    releaseNotes(release)
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(updater.releases.enumerated()), id: \.element.id) { index, release in
+                        releaseSection(release)
+                        if index < updater.releases.count - 1 {
+                            Divider().background(Color.white.opacity(0.06))
+                                .padding(.vertical, 12)
+                        }
+                    }
                 }
                 .padding(16)
             }
@@ -74,75 +81,67 @@ struct ReleaseNotesView: View {
             Spacer()
             Button("Check for Updates") { updater.check() }
                 .buttonStyle(.plain)
-                .font(.system(size: 13, weight: .bold, design: .rounded))
                 .foregroundColor(.accentColor)
             Spacer()
         }
     }
 
-    private func versionCompare(_ release: GitHubRelease) -> some View {
-        let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
-        let isNewer = release.version.compare(current, options: .numeric) == .orderedDescending
-
-        return HStack(spacing: 12) {
-            Image(systemName: isNewer ? "arrow.down.circle.fill" : "checkmark.circle.fill")
-                .font(.system(size: 22))
-                .foregroundColor(isNewer ? .accentColor : .green)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(isNewer ? "Update available" : "Up to date")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                Text("\(release.version) — \(release.formattedDate)")
-                    .font(.system(size: 11, design: .rounded))
+    private func releaseSection(_ release: GitHubRelease) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "tag")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.accentColor)
+                Text("v\(release.version)")
+                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                Spacer()
+                Text(release.formattedDate)
+                    .font(.system(size: 10, design: .rounded))
                     .foregroundColor(.secondary)
             }
 
-            Spacer()
-
-            if isNewer {
-                Button {
-                    if let url = updater.downloadURL(for: release) {
-                        NSWorkspace.shared.open(url)
-                    }
-                } label: {
-                    Text("Download")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Capsule().fill(Color.accentColor))
-                }
-                .buttonStyle(.plain)
+            if !release.body.isEmpty {
+                Text(markdownString(release.body))
+                    .font(.system(size: 11, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.85))
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isNewer ? Color.accentColor.opacity(0.08) : Color.green.opacity(0.08))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(isNewer ? Color.accentColor.opacity(0.2) : Color.green.opacity(0.2), lineWidth: 1)
-        )
-    }
 
-    private func releaseNotes(_ release: GitHubRelease) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Release Notes")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
-
-            Text(markdownToAttributed(release.body))
-                .font(.system(size: 11, design: .rounded))
-                .foregroundColor(.secondary.opacity(0.85))
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if release.tagName == updater.latestRelease?.tagName,
+               release.version.compare(currentVersion, options: .numeric) == .orderedDescending {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .font(.system(size: 12))
+                    Text("New version available")
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    Spacer()
+                    Button {
+                        if let url = updater.downloadURL(for: release) {
+                            NSWorkspace.shared.open(url)
+                        }
+                    } label: {
+                        Text("Download")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(Color.accentColor))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(10)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.accentColor.opacity(0.08))
+                )
+            }
         }
     }
 
     private var footer: some View {
         HStack {
             Button("Close") {
-                NSApplication.shared.keyWindow?.close()
+                dismiss()
             }
             .buttonStyle(.plain)
             .font(.system(size: 12, weight: .bold, design: .rounded))
@@ -169,27 +168,21 @@ struct ReleaseNotesView: View {
         .padding(16)
     }
 
-    private func markdownToAttributed(_ text: String) -> AttributedString {
-        var result = text
-        // Bold: **text** or __text__
-        result = result.replacingOccurrences(of: #"\*\*(.+?)\*\*"#, with: "$1", options: .regularExpression)
-        // Italic: *text*
-        result = result.replacingOccurrences(of: #"\*(.+?)\*"#, with: "$1", options: .regularExpression)
-        // Headers: ## text
-        result = result.replacingOccurrences(of: #"^#{1,6}\s+"#, with: "", options: .regularExpression)
-        // List markers
-        result = result.replacingOccurrences(of: #"(?m)^[*-]\s+"#, with: "• ", options: .regularExpression)
-        // Links [text](url)
-        result = result.replacingOccurrences(of: #"\[(.+?)\]\(.+?\)"#, with: "$1", options: .regularExpression)
-        // Code blocks ```
-        result = result.replacingOccurrences(of: #"(?s)```.*?```"#, with: "", options: .regularExpression)
-        // Inline code
-        result = result.replacingOccurrences(of: "`", with: "")
+    private func markdownString(_ text: String) -> AttributedString {
+        guard let parsed = try? AttributedString(
+            markdown: text,
+            options: .init(
+                allowsExtendedAttributes: true,
+                interpretedSyntax: .inlineOnlyPreservingWhitespace
+            )
+        ) else {
+            return AttributedString(text)
+        }
+        return parsed
+    }
 
-        return (try? AttributedString(markdown: result, options: .init(
-            allowsExtendedAttributes: true,
-            interpretedSyntax: .inlineOnlyPreservingWhitespace
-        ))) ?? AttributedString(result)
+    private var currentVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
     }
 }
 
