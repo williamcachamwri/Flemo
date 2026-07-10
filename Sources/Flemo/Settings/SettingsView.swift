@@ -1012,6 +1012,9 @@ private struct StatsSettingsPane: View {
 }
 
 private struct AboutSettingsPane: View {
+    @State private var showingUpdateSheet = false
+    @ObservedObject private var updater = UpdateChecker.shared
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
@@ -1034,6 +1037,20 @@ private struct AboutSettingsPane: View {
             MetricRow(icon: "face.smiling", title: "Emoji Library", value: "\(EmojiDataLoader.shared.allEmojis.count)")
             MetricRow(icon: "shippingbox", title: "Bundle", value: bundleIdentifier)
 
+            Divider().background(Color.white.opacity(0.06))
+
+            ActionRow(
+                icon: "arrow.down.circle",
+                title: "Check for Updates",
+                subtitle: updater.latestRelease.map { "Latest: \($0.version)" } ?? "Look for a newer version",
+                label: updater.isLoading ? "..." : "Check"
+            ) {
+                updater.check()
+                showingUpdateSheet = true
+            }
+
+            Divider().background(Color.white.opacity(0.06))
+
             Button {
                 if let url = URL(string: "https://github.com/williamcachamwri/Flemo") {
                     NSWorkspace.shared.open(url)
@@ -1052,6 +1069,9 @@ private struct AboutSettingsPane: View {
                 }
             }
             .buttonStyle(.plain)
+        }
+        .sheet(isPresented: $showingUpdateSheet) {
+            ReleaseNotesView()
         }
     }
 

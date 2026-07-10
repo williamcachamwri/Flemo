@@ -1,87 +1,103 @@
+# Flemo
+
 <p align="center">
-  <img src="docs/assets/flemo-logo.png" width="132" alt="Flemo app icon">
+  <img src="docs/assets/flemo-logo.png" width="120" alt="Flemo">
 </p>
 
-<h1 align="center">Flemo</h1>
-
 <p align="center">
+  <b>Inline emoji that follows your typing.</b><br>
   A fast, polished inline emoji picker for macOS.
 </p>
 
 <p align="center">
-  <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-0A84FF?style=for-the-badge&logo=apple&logoColor=white">
-  <img alt="Swift" src="https://img.shields.io/badge/Swift-5.9-F05138?style=for-the-badge&logo=swift&logoColor=white">
-  <img alt="Sparkle" src="https://img.shields.io/badge/Updates-Sparkle-18A058?style=for-the-badge">
+  <img src="https://img.shields.io/badge/macOS-14%2B-0A84FF?style=flat-square&logo=apple&logoColor=white" alt="macOS 14+">
+  <img src="https://img.shields.io/badge/Swift-5.9-F05138?style=flat-square&logo=swift&logoColor=white" alt="Swift 5.9">
+  <img src="https://img.shields.io/badge/Updates-Sparkle-18A058?style=flat-square" alt="Sparkle">
+  <img src="https://img.shields.io/github/v/release/williamcachamwri/Flemo?style=flat-square&label=release" alt="Latest release">
+  <img src="https://img.shields.io/github/actions/workflow/status/williamcachamwri/Flemo/build.yml?style=flat-square&branch=main" alt="Build">
+  <br>
+  <a href="https://github.com/williamcachamwri/Flemo/releases/latest">Download</a>
+  ·
+  <a href="#install">Install</a>
+  ·
+  <a href="#build">Build</a>
+  ·
+  <a href="docs/SPARKLE.md">Updates</a>
 </p>
 
 <p align="center">
   <img src="docs/assets/flemo-demo.gif" width="720" alt="Flemo demo">
 </p>
 
-## Overview
+---
 
-Flemo sits quietly in the macOS menu bar and brings emoji search directly to your cursor. Type a trigger, pick from a compact animated suggestion strip, and keep writing without breaking flow.
+## Features
 
-## Highlights
-
-- Inline emoji suggestions with sleek and descriptive popup layouts.
-- Full emoji board with category navigation and keyword search.
-- Unified skin tone preference that collapses duplicate people emoji variants.
-- Rules for ignored apps and sites.
-- Local usage stats and frequency-aware ranking.
-- Sparkle-powered update hooks with separate Debug and Release channels.
+- **Inline suggestions** — Type a trigger character, pick from a compact animated strip right at your cursor.
+- **Emoji board** — Full category grid with live keyword search.
+- **Skin tone preferences** — Unified preference collapses duplicate person emoji variants.
+- **Smart ranking** — Frequency tracker moves your most-used emoji to the top.
+- **Site & app rules** — Suppress Flemo on specific domains or in specific apps.
+- **Customisation** — Choose from 6 popup themes, 2 layouts, and adjustable trigger length.
 
 ## Install
 
-Download the latest `Flemo-Release-vX.Y.Z.zip` from [Releases](https://github.com/williamcachamwri/Flemo/releases), unzip it, and drag `Flemo.app` into `/Applications`. The app is ad-hoc signed (not notarized), so clear the quarantine flag and open it:
+Download the latest `Flemo-Release-vX.Y.Z.zip` from [Releases](https://github.com/williamcachamwri/Flemo/releases/latest), unzip, and drag `Flemo.app` into `/Applications`.
+
+Since the app is ad-hoc signed, clear the quarantine flag:
 
 ```sh
 sudo xattr -dr com.apple.quarantine /Applications/Flemo.app
 open /Applications/Flemo.app
 ```
 
+## Permissions
+
+Flemo needs three permissions to work:
+
+| Permission | Purpose |
+|---|---|
+| **Accessibility** | Read text and cursor position for inline suggestions |
+| **Input Monitoring** | Detect keyboard events (trigger keys, arrow navigation) |
+| **Automation** | Read browser URLs so site rules can suppress suggestions |
+
+Grant them in **System Settings → Privacy & Security**. Flemo will prompt you on first launch.
+
 ## Build
 
 ```sh
 swift build -c debug --product Flemo
-swift build -c release --product Flemo
 ```
 
 Create a local app bundle:
 
 ```sh
 BUILD_CONFIGURATION=debug SIGN_IDENTITY=- ./build-app.sh
-BUILD_CONFIGURATION=release SIGN_IDENTITY=- ./build-app.sh
 ```
 
-Use `INSTALL_APP=0` to build without copying into `/Applications`.
+| Variable | Default | Description |
+|---|---|---|
+| `BUILD_CONFIGURATION` | `debug` | `debug` or `release` |
+| `SIGN_IDENTITY` | `-` (ad-hoc) | Code-signing identity |
+| `INSTALL_APP` | `1` | Set to `0` to skip copying into `/Applications` |
 
 ## Update Channels
 
-Flemo keeps Debug and Release update tracks separate so Sparkle never crosses streams:
+Flemo uses [Sparkle 2](https://sparkle-project.org) for automatic updates with separate channels:
 
-| Channel | App bundle | Bundle ID | Default appcast |
-| --- | --- | --- | --- |
-| Debug | `Flemo Debug.app` | `com.flemo.debug` | `https://williamcachamwri.github.io/Flemo/debug-appcast.xml` |
-| Release | `Flemo.app` | `com.flemo.app` | `https://williamcachamwri.github.io/Flemo/appcast.xml` |
+| Channel | Bundle | Appcast |
+|---|---|---|
+| **Release** | `Flemo.app` | [`appcast.xml`](https://williamcachamwri.github.io/Flemo/appcast.xml) |
+| **Debug** | `Flemo Debug.app` | [`debug-appcast.xml`](https://williamcachamwri.github.io/Flemo/debug-appcast.xml) |
 
-Configure real feeds and public EdDSA keys with:
-
-```sh
-FLEMO_DEBUG_APPCAST_URL="https://your-domain.example/flemo/debug/appcast.xml"
-FLEMO_RELEASE_APPCAST_URL="https://your-domain.example/flemo/appcast.xml"
-FLEMO_DEBUG_SPARKLE_PUBLIC_KEY="..."
-FLEMO_RELEASE_SPARKLE_PUBLIC_KEY="..."
-```
-
-See [docs/SPARKLE.md](docs/SPARKLE.md) for release notes and signing setup.
+See [docs/SPARKLE.md](docs/SPARKLE.md) for signing setup and custom feed configuration.
 
 ## CI
 
-GitHub Actions builds both Debug and Release `.app` bundles for every push, pull request, and manual run. Tag pushes like `v1.1.1` create a GitHub Release with zipped app bundles, appcast files, and auto-generated notes (commit changelog + contributors).
+GitHub Actions builds both Debug and Release `.app` bundles for every push and pull request. Tag pushes (`v*`) create a [GitHub Release](https://github.com/williamcachamwri/Flemo/releases) with zipped bundles, signed appcasts, and auto-generated release notes.
 
 ## Requirements
 
-- macOS 14 or newer.
-- Swift 5.9 or newer.
-- Accessibility and Input Monitoring permissions for global text detection.
+- macOS 14 Sonoma or newer
+- Swift 5.9+
+- Xcode 15+ (to build from source)
