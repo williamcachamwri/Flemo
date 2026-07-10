@@ -386,80 +386,120 @@ struct OnboardingView: View {
 
 private struct EmojiBurstView: View {
     @State private var burstPhase = false
+    @State private var floatPhase = false
+    @State private var ringPhase = false
     @State private var textPhase = false
     @ObservedObject private var appState = AppState.shared
-
-    private let emojis: [(String, CGFloat, CGFloat)] = [
-        ("😀", -120, -80), ("😂", -72, -96), ("😍", 0, -110),
-        ("🤩", 72, -96), ("😎", 120, -80), ("🔥", 140, -36),
-        ("✨", 130, 10), ("🚀", 96, 56), ("🎉", 40, 82),
-        ("❤️", -40, 82), ("👍", -96, 56), ("🙏", -130, 10),
-        ("🐱", -140, -36), ("💀", -90, -48), ("🌟", 90, -48),
-        ("💡", 50, -90),
-    ]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geo in
             let w = geo.size.width
             let h = geo.size.height
 
-            ZStack {
-                ForEach(Array(emojis.enumerated()), id: \.offset) { i, item in
-                    let (char, ox, oy) = item
-                    let delay = 0.04 * Double(i)
-                    let rot = Double.random(in: -20...20)
-                    let size = CGFloat.random(in: 22...28)
+            VStack(spacing: 0) {
+                ZStack {
+                    BurstHalo(
+                        expanded: burstPhase,
+                        rotating: ringPhase,
+                        reduceMotion: reduceMotion
+                    )
 
-                    BurstEmoji(
-                        character: char,
-                        fontSize: size,
-                        offsetX: ox,
-                        offsetY: oy,
-                        rotation: rot,
-                        delay: delay,
-                        activated: burstPhase
+                    ForEach(BurstParticle.all) { particle in
+                        BurstEmoji(
+                            particle: particle,
+                            expanded: burstPhase,
+                            floating: floatPhase,
+                            reduceMotion: reduceMotion
+                        )
+                    }
+
+                    WelcomeMark()
+                        .scaleEffect(burstPhase ? 1 : 0.88)
+                        .opacity(burstPhase ? 1 : 0)
+                        .animation(
+                            reduceMotion ? nil : .spring(response: 0.58, dampingFraction: 0.74),
+                            value: burstPhase
+                        )
+                }
+                .frame(width: w, height: min(max(h * 0.66, 286), 312))
+
+                VStack(spacing: 11) {
+                    VStack(spacing: 5) {
+                        Text("Flemo")
+                            .font(.system(size: 30, weight: .bold, design: .rounded))
+                            .foregroundStyle(.primary)
+
+                        Text("Emoji suggestions, right where you type.")
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundColor(.secondary.opacity(0.74))
+                            .multilineTextAlignment(.center)
+                    }
+
+                    HStack(spacing: 8) {
+                        Text(appState.triggerCharacter)
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                            .foregroundColor(.primary.opacity(0.92))
+                            .frame(width: 24, height: 24)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(Color.black.opacity(0.18))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                            )
+
+                        Text("type a word to summon emoji anywhere")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundColor(.secondary.opacity(0.68))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color.secondary.opacity(0.10))
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
                     )
                 }
+                .opacity(textPhase ? 1 : 0)
+                .offset(y: textPhase ? 0 : 8)
+                .animation(
+                    reduceMotion ? nil : .easeOut(duration: 0.42),
+                    value: textPhase
+                )
 
-                WelcomeMark()
-                    .scaleEffect(burstPhase ? 1 : 0.92)
-                    .opacity(burstPhase ? 1 : 0)
+                Spacer(minLength: 0)
             }
-            .frame(width: w, height: h)
-
-            VStack(spacing: 9) {
-                Spacer().frame(height: h * 0.72)
-                Text("Flemo")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                Text("Inline emoji that follows your typing.")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary.opacity(0.72))
-                    .multilineTextAlignment(.center)
-                Spacer().frame(height: 4)
-                HStack(spacing: 8) {
-                    Text(appState.triggerCharacter)
-                        .font(.system(size: 13, weight: .bold, design: .monospaced))
-                        .foregroundColor(.primary.opacity(0.9))
-                        .frame(width: 22, height: 22)
-                        .background(RoundedRectangle(cornerRadius: 5).fill(Color.black.opacity(0.18)))
-                        .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.white.opacity(0.16)))
-                    Text("type a word to summon emoji anywhere")
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .foregroundColor(.secondary.opacity(0.68))
-                }
-                .padding(.horizontal, 14).padding(.vertical, 8)
-                .background(Capsule().fill(Color.secondary.opacity(0.10)))
-            }
-            .opacity(textPhase ? 1 : 0)
             .frame(width: w)
         }
         .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.72)) {
+            if reduceMotion {
+                burstPhase = true
+                textPhase = true
+                return
+            }
+
+            withAnimation(.spring(response: 0.58, dampingFraction: 0.74, blendDuration: 0.08)) {
                 burstPhase = true
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-                withAnimation(.easeOut(duration: 0.4)) {
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.38) {
+                withAnimation(.easeOut(duration: 0.42)) {
                     textPhase = true
+                }
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.72) {
+                withAnimation(.easeInOut(duration: 3.2).repeatForever(autoreverses: true)) {
+                    floatPhase = true
+                }
+
+                withAnimation(.linear(duration: 18).repeatForever(autoreverses: false)) {
+                    ringPhase = true
                 }
             }
         }
@@ -467,32 +507,178 @@ private struct EmojiBurstView: View {
 }
 
 private struct BurstEmoji: View {
-    let character: String
-    let fontSize: CGFloat
-    let offsetX: CGFloat
-    let offsetY: CGFloat
-    let rotation: Double
-    let delay: Double
-    let activated: Bool
-
-    @State private var localPhase = false
+    let particle: BurstParticle
+    let expanded: Bool
+    let floating: Bool
+    let reduceMotion: Bool
 
     var body: some View {
-        Text(character)
-            .font(.system(size: fontSize))
-            .rotationEffect(.degrees(localPhase ? rotation : 0))
-            .scaleEffect(localPhase ? 1 : 0.01)
-            .offset(x: localPhase ? offsetX : 0, y: localPhase ? offsetY : 0)
-            .opacity(localPhase ? 0.92 : 0)
-            .onChange(of: activated) { _, newVal in
-                guard newVal else { return }
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                    withAnimation(.spring(response: 0.55, dampingFraction: 0.65)) {
-                        localPhase = true
-                    }
-                }
-            }
+        let drift = reduceMotion || !expanded
+            ? CGSize.zero
+            : (floating ? particle.drift : CGSize(width: -particle.drift.width, height: -particle.drift.height))
+        let scale = expanded ? (floating ? particle.floatScale : 1.0) : 0.12
+
+        Text(particle.character)
+            .font(.system(size: particle.size))
+            .scaleEffect(scale)
+            .rotationEffect(.degrees(expanded ? particle.rotation + (floating ? particle.rotationDrift : -particle.rotationDrift) : 0))
+            .offset(
+                x: expanded ? particle.offset.width + drift.width : 0,
+                y: expanded ? particle.offset.height + drift.height : 0
+            )
+            .opacity(expanded ? particle.opacity : 0)
+            .blur(radius: expanded ? particle.blur : 7)
+            .shadow(color: .black.opacity(particle.shadowOpacity), radius: particle.shadowRadius, y: particle.shadowY)
+            .zIndex(particle.depth)
+            .animation(
+                reduceMotion ? nil : .spring(response: 0.64, dampingFraction: 0.72, blendDuration: 0.08).delay(particle.delay),
+                value: expanded
+            )
+            .animation(
+                reduceMotion ? nil : .easeInOut(duration: particle.floatDuration).repeatForever(autoreverses: true).delay(particle.delay),
+                value: floating
+            )
+            .accessibilityHidden(true)
     }
+}
+
+private struct BurstHalo: View {
+    let expanded: Bool
+    let rotating: Bool
+    let reduceMotion: Bool
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color.accentColor.opacity(0.26),
+                            Color.cyan.opacity(0.11),
+                            Color.clear
+                        ],
+                        center: .center,
+                        startRadius: 6,
+                        endRadius: 170
+                    )
+                )
+                .frame(width: 340, height: 340)
+                .scaleEffect(expanded ? 1 : 0.54)
+                .opacity(expanded ? 1 : 0)
+
+            Circle()
+                .stroke(
+                    AngularGradient(
+                        colors: [
+                            Color.white.opacity(0.0),
+                            Color.white.opacity(0.22),
+                            Color.cyan.opacity(0.22),
+                            Color.accentColor.opacity(0.26),
+                            Color.white.opacity(0.0)
+                        ],
+                        center: .center
+                    ),
+                    lineWidth: 1
+                )
+                .frame(width: 176, height: 176)
+                .rotationEffect(.degrees(rotating ? 360 : 0))
+                .opacity(expanded ? 0.92 : 0)
+
+            Circle()
+                .stroke(
+                    Color.white.opacity(0.11),
+                    style: StrokeStyle(lineWidth: 1, dash: [3, 9], dashPhase: rotating ? 18 : 0)
+                )
+                .frame(width: 246, height: 246)
+                .rotationEffect(.degrees(rotating ? -360 : 0))
+                .opacity(expanded ? 0.62 : 0)
+
+            ForEach(BurstSpark.all) { spark in
+                Circle()
+                    .fill(spark.color)
+                    .frame(width: spark.size, height: spark.size)
+                    .offset(
+                        x: expanded ? spark.offset.width : 0,
+                        y: expanded ? spark.offset.height : 0
+                    )
+                    .opacity(expanded ? spark.opacity : 0)
+                    .blur(radius: spark.blur)
+                    .animation(
+                        reduceMotion ? nil : .spring(response: 0.62, dampingFraction: 0.78).delay(spark.delay),
+                        value: expanded
+                    )
+            }
+        }
+        .scaleEffect(expanded ? 1 : 0.82)
+        .animation(
+            reduceMotion ? nil : .spring(response: 0.66, dampingFraction: 0.78),
+            value: expanded
+        )
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct BurstParticle: Identifiable {
+    let id: Int
+    let character: String
+    let offset: CGSize
+    let drift: CGSize
+    let size: CGFloat
+    let rotation: Double
+    let rotationDrift: Double
+    let delay: Double
+    let opacity: Double
+    let blur: CGFloat
+    let depth: Double
+    let floatScale: CGFloat
+    let floatDuration: Double
+
+    var shadowOpacity: Double {
+        depth > 1 ? 0.24 : 0.14
+    }
+
+    var shadowRadius: CGFloat {
+        depth > 1 ? 11 : 7
+    }
+
+    var shadowY: CGFloat {
+        depth > 1 ? 6 : 3
+    }
+
+    static let all: [BurstParticle] = [
+        BurstParticle(id: 0, character: "✨", offset: CGSize(width: -126, height: -84), drift: CGSize(width: -4, height: 5), size: 24, rotation: -18, rotationDrift: 5, delay: 0.02, opacity: 0.90, blur: 0, depth: 2, floatScale: 1.04, floatDuration: 3.0),
+        BurstParticle(id: 1, character: "😀", offset: CGSize(width: -76, height: -110), drift: CGSize(width: 3, height: -4), size: 28, rotation: -9, rotationDrift: -3, delay: 0.06, opacity: 0.94, blur: 0, depth: 3, floatScale: 1.03, floatDuration: 3.4),
+        BurstParticle(id: 2, character: "💬", offset: CGSize(width: 8, height: -124), drift: CGSize(width: -2, height: 5), size: 25, rotation: 8, rotationDrift: 4, delay: 0.10, opacity: 0.88, blur: 0, depth: 2, floatScale: 1.05, floatDuration: 3.2),
+        BurstParticle(id: 3, character: "😍", offset: CGSize(width: 84, height: -104), drift: CGSize(width: 4, height: -3), size: 28, rotation: 14, rotationDrift: -4, delay: 0.14, opacity: 0.94, blur: 0, depth: 3, floatScale: 1.03, floatDuration: 3.5),
+        BurstParticle(id: 4, character: "⚡️", offset: CGSize(width: 134, height: -56), drift: CGSize(width: -3, height: 4), size: 24, rotation: 18, rotationDrift: 5, delay: 0.18, opacity: 0.88, blur: 0, depth: 2, floatScale: 1.05, floatDuration: 2.9),
+        BurstParticle(id: 5, character: "🚀", offset: CGSize(width: 116, height: 28), drift: CGSize(width: 4, height: 3), size: 28, rotation: -10, rotationDrift: -5, delay: 0.22, opacity: 0.93, blur: 0, depth: 3, floatScale: 1.04, floatDuration: 3.1),
+        BurstParticle(id: 6, character: "🔥", offset: CGSize(width: 58, height: 88), drift: CGSize(width: -2, height: 5), size: 26, rotation: 15, rotationDrift: 4, delay: 0.26, opacity: 0.90, blur: 0, depth: 2, floatScale: 1.05, floatDuration: 3.3),
+        BurstParticle(id: 7, character: "✅", offset: CGSize(width: -22, height: 102), drift: CGSize(width: 3, height: -3), size: 25, rotation: -7, rotationDrift: -4, delay: 0.30, opacity: 0.88, blur: 0, depth: 2, floatScale: 1.04, floatDuration: 3.6),
+        BurstParticle(id: 8, character: "🙌", offset: CGSize(width: -94, height: 72), drift: CGSize(width: -4, height: 3), size: 26, rotation: -15, rotationDrift: 5, delay: 0.34, opacity: 0.90, blur: 0, depth: 2, floatScale: 1.03, floatDuration: 3.0),
+        BurstParticle(id: 9, character: "⭐️", offset: CGSize(width: -138, height: 12), drift: CGSize(width: 3, height: 5), size: 25, rotation: 11, rotationDrift: -3, delay: 0.38, opacity: 0.84, blur: 0, depth: 1, floatScale: 1.05, floatDuration: 3.4),
+        BurstParticle(id: 10, character: "💡", offset: CGSize(width: -48, height: -58), drift: CGSize(width: 2, height: 3), size: 20, rotation: 9, rotationDrift: 3, delay: 0.18, opacity: 0.62, blur: 0.35, depth: 1, floatScale: 1.03, floatDuration: 3.7),
+        BurstParticle(id: 11, character: "😎", offset: CGSize(width: 54, height: -46), drift: CGSize(width: -3, height: -2), size: 21, rotation: -8, rotationDrift: -3, delay: 0.22, opacity: 0.66, blur: 0.35, depth: 1, floatScale: 1.04, floatDuration: 3.2)
+    ]
+}
+
+private struct BurstSpark: Identifiable {
+    let id: Int
+    let offset: CGSize
+    let size: CGFloat
+    let color: Color
+    let opacity: Double
+    let blur: CGFloat
+    let delay: Double
+
+    static let all: [BurstSpark] = [
+        BurstSpark(id: 0, offset: CGSize(width: -104, height: -20), size: 5, color: Color.white.opacity(0.76), opacity: 0.62, blur: 0.4, delay: 0.12),
+        BurstSpark(id: 1, offset: CGSize(width: -36, height: -138), size: 4, color: Color.cyan.opacity(0.72), opacity: 0.56, blur: 0.4, delay: 0.20),
+        BurstSpark(id: 2, offset: CGSize(width: 98, height: -82), size: 5, color: Color.accentColor.opacity(0.72), opacity: 0.56, blur: 0.5, delay: 0.26),
+        BurstSpark(id: 3, offset: CGSize(width: 152, height: 8), size: 4, color: Color.white.opacity(0.66), opacity: 0.48, blur: 0.4, delay: 0.30),
+        BurstSpark(id: 4, offset: CGSize(width: 24, height: 130), size: 5, color: Color.cyan.opacity(0.62), opacity: 0.50, blur: 0.5, delay: 0.34),
+        BurstSpark(id: 5, offset: CGSize(width: -138, height: 64), size: 4, color: Color.accentColor.opacity(0.62), opacity: 0.48, blur: 0.4, delay: 0.38)
+    ]
 }
 
 // MARK: - Welcome mark
@@ -521,8 +707,24 @@ private struct WelcomeMark: View {
                 }
             }
         }
-        .frame(width: 86, height: 86)
-        .shadow(color: Color.accentColor.opacity(0.40), radius: 22, y: 8)
+        .frame(width: 92, height: 92)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.48),
+                            Color.white.opacity(0.10)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: Color.black.opacity(0.24), radius: 18, y: 10)
+        .shadow(color: Color.accentColor.opacity(0.30), radius: 26, y: 8)
     }
 
     private static var appIcon: NSImage? {
