@@ -289,6 +289,8 @@ class GlobalInputMonitor: NSObject {
     private func cancelSuggestions() {
         pendingCancelWorkItem?.cancel()
         pendingCancelWorkItem = nil
+        isTriggered = false
+        eventBuffer = ""
         lastDetectedKeyword = ""
         hasDetectedTrigger = false
         lastFireTime = .distantPast

@@ -136,23 +136,34 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         appState.currentSuggestionQuery = keyword
         currentSuggestionReplacesTrigger = true
         appState.inlinePopupHeight = popupHeight(for: anchorRect)
-        let results = EmojiSearchEngine.shared.search(keyword: keyword, maxResults: 10)
-        let nextSuggestions = results.map { SuggestionItem(emoji: $0) }
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.82, blendDuration: 0.08)) {
-            appState.suggestions = nextSuggestions
-            if isSameKeyword {
-                clampVisibleSelection()
-            } else {
-                appState.selectedSuggestionIndex = 0
-                appState.visibleSuggestionStart = 0
-            }
-            appState.isShowingSuggestions = !results.isEmpty
+
+        // Same keyword already showing — skip re-search + animation, just update position
+        if isSameKeyword {
+            showOverlayAfterLayout(below: anchorRect)
+            return
         }
-        if appState.isShowingSuggestions { showOverlayAfterLayout(below: anchorRect) }
-        else {
-            appState.currentSuggestionQuery = ""
-            currentSuggestionReplacesTrigger = false
-            overlayPanel.hide()
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+            let results = EmojiSearchEngine.shared.search(keyword: keyword, maxResults: 10)
+            let nextSuggestions = results.map { SuggestionItem(emoji: $0) }
+
+            DispatchQueue.main.async {
+                guard self.currentKeyword == keyword else { return }
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.82, blendDuration: 0.08)) {
+                    self.appState.suggestions = nextSuggestions
+                    self.appState.selectedSuggestionIndex = 0
+                    self.appState.visibleSuggestionStart = 0
+                    self.appState.isShowingSuggestions = !nextSuggestions.isEmpty
+                }
+                if self.appState.isShowingSuggestions {
+                    self.showOverlayAfterLayout(below: anchorRect)
+                } else {
+                    self.appState.currentSuggestionQuery = ""
+                    self.currentSuggestionReplacesTrigger = false
+                    self.overlayPanel.hide()
+                }
+            }
         }
     }
 
