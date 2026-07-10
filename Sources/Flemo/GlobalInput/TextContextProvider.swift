@@ -8,11 +8,22 @@ struct TextContext {
     let focusedElementBounds: CGRect
 }
 
+struct TypingAnchorBounds {
+    enum CoordinateSpace {
+        case accessibility
+        case cocoa
+    }
+
+    let rect: CGRect
+    let coordinateSpace: CoordinateSpace
+}
+
 class TextContextProvider {
     static let shared = TextContextProvider()
     private let log = OSLog(subsystem: "com.flemo.app", category: "TextCtx")
     private static let maxContextLength = 100
     private static let recentAnchorLifetime: TimeInterval = 45
+    private static let recentInteractionLifetime: TimeInterval = 120
 
     private struct RecentInputAnchor {
         let rect: CGRect
@@ -20,22 +31,69 @@ class TextContextProvider {
         let timestamp: Date
     }
 
+    private struct RecentInteractionAnchor {
+        let axPoint: CGPoint
+        let cocoaPoint: CGPoint
+        let appPID: pid_t
+        let windowRect: CGRect?
+        let timestamp: Date
+    }
+
+    private struct TextEntryCandidate {
+        let rect: CGRect
+        let score: Int
+    }
+
     private var recentInputAnchor: RecentInputAnchor?
+    private var recentInteractionAnchor: RecentInteractionAnchor?
 
     @discardableResult
-    func rememberPotentialInputAnchor(at point: CGPoint) -> Bool {
-        guard let app = focusedApplication(),
-              let appPID = processID(of: app)
-        else { return false }
+    func rememberPotentialInputAnchor(at point: CGPoint, cocoaPoint: CGPoint) -> Bool {
+        if isPointInsideOwnVisibleWindow(cocoaPoint) {
+            return false
+        }
 
+        guard let appPID = activeProcessID() else { return false }
+
+        let app = focusedApplication()
+        let windowRect = app
+            .flatMap { focusedWindowElement(of: $0) ?? primaryWindowElement(of: $0) }
+            .flatMap { focusedElementBounds(element: $0) }
+        recentInteractionAnchor = RecentInteractionAnchor(
+            axPoint: point,
+            cocoaPoint: cocoaPoint,
+            appPID: appPID,
+            windowRect: windowRect,
+            timestamp: Date()
+        )
+
+        guard let app else { return true }
         var hitElement: AXUIElement?
         guard AXUIElementCopyElementAtPosition(app, Float(point.x), Float(point.y), &hitElement) == .success,
-              let hitElement,
-              let rect = textEntryBounds(from: hitElement)
+              let hitElement
+        else { return false }
+
+        guard let rect = textEntryBounds(from: hitElement)
+            ?? bestTextEntryDescendantBounds(of: hitElement, maxDepth: 5, containerBounds: nil)
         else { return false }
 
         recentInputAnchor = RecentInputAnchor(rect: rect, appPID: appPID, timestamp: Date())
         return true
+    }
+
+    func currentQuickEmojiAnchor() -> TypingAnchorBounds? {
+        if let clickRect = recentInteractionCocoaAnchorBounds(maxAge: Self.recentInteractionLifetime) {
+            os_log(.debug, log: log, "Quick anchor source=click-cocoa x=%.1f y=%.1f", Double(clickRect.minX), Double(clickRect.minY))
+            return TypingAnchorBounds(rect: clickRect, coordinateSpace: .cocoa)
+        }
+
+        if let axRect = currentTypingAnchorBounds() {
+            os_log(.debug, log: log, "Quick anchor source=ax x=%.1f y=%.1f", Double(axRect.minX), Double(axRect.minY))
+            return TypingAnchorBounds(rect: axRect, coordinateSpace: .accessibility)
+        }
+
+        os_log(.debug, log: log, "Quick anchor source=none")
+        return nil
     }
 
     var cursorScreenPosition: NSPoint? {
@@ -86,6 +144,56 @@ class TextContextProvider {
 
         return bestElementBounds(element: element)
             ?? recentAnchorBounds()
+    }
+
+    func currentTypingAnchorBounds() -> CGRect? {
+        guard let element = textInputElement() else {
+            if let recent = recentAnchorBounds() {
+                return insertionAnchorRect(in: recent)
+            }
+            if let descendant = focusedTextEntryDescendantAnchor() {
+                return insertionAnchorRect(in: descendant)
+            }
+            if let interaction = recentInteractionAnchorBounds() {
+                return interaction
+            }
+            return nil
+        }
+
+        if let markerRect = selectedTextMarkerBounds(element: element),
+           isUsableAnchor(markerRect) {
+            return preferredCurrentAnchor(from: triggerAnchorRect(from: markerRect, typedLength: 0, element: element))
+        }
+
+        if let cursor = selectedCursor(in: element),
+           let cursorRect = cursorScreenBounds(element: element, cursor: cursor),
+           isUsableAnchor(cursorRect) {
+            return preferredCurrentAnchor(from: triggerAnchorRect(from: cursorRect, typedLength: 0, element: element))
+        }
+
+        if let context = getTextContext(),
+           isUsableAnchor(context.cursorScreenBounds) {
+            return preferredCurrentAnchor(from: context.cursorScreenBounds)
+        }
+
+        if let recent = recentAnchorBounds() {
+            return insertionAnchorRect(in: recent)
+        }
+
+        if let descendant = focusedTextEntryDescendantAnchor() {
+            return insertionAnchorRect(in: descendant)
+        }
+
+        if let interaction = recentInteractionAnchorBounds() {
+            return interaction
+        }
+
+        if let inputRect = bestElementBounds(element: element) ?? focusedElementBounds(element: element),
+           isLikelyInputAnchor(inputRect) {
+            return insertionAnchorRect(in: inputRect)
+        }
+
+        return nil
     }
 
     func getTextContext() -> TextContext? {
@@ -179,6 +287,28 @@ class TextContextProvider {
               let appElem = app
         else { return nil }
         return (appElem as! AXUIElement)
+    }
+
+    private func focusedTextEntryDescendantAnchor() -> CGRect? {
+        guard let app = focusedApplication() else { return nil }
+
+        if let window = focusedWindowElement(of: app) ?? primaryWindowElement(of: app) {
+            let windowBounds = focusedElementBounds(element: window)
+            if let rect = bestTextEntryDescendantBounds(
+                of: window,
+                maxDepth: 9,
+                containerBounds: windowBounds
+            ) {
+                return rect
+            }
+        }
+
+        if let focus = focusedElement(),
+           let rect = bestTextEntryDescendantBounds(of: focus, maxDepth: 7, containerBounds: focusedElementBounds(element: focus)) {
+            return rect
+        }
+
+        return bestTextEntryDescendantBounds(of: app, maxDepth: 9, containerBounds: focusedElementBounds(element: app))
     }
 
     private func selectedCursor(in element: AXUIElement) -> Int? {
@@ -341,6 +471,69 @@ class TextContextProvider {
         return CGRect(x: x, y: y, width: estimatedTextWidth, height: lineHeight)
     }
 
+    private func insertionAnchorRect(in inputRect: CGRect) -> CGRect {
+        let lineHeight = min(max(inputRect.height * 0.22, 16), 24)
+        let horizontalInset = inputRect.height >= 64
+            ? min(max(inputRect.width * 0.018, 22), 34)
+            : horizontalTextInset(for: inputRect)
+        let verticalInset = inputRect.height >= 64
+            ? min(max(inputRect.height * 0.18, 18), 36)
+            : max((inputRect.height - lineHeight) / 2, 2)
+        let x = min(max(inputRect.minX + horizontalInset, inputRect.minX + 2), inputRect.maxX - 8)
+        let y = min(max(inputRect.minY + verticalInset, inputRect.minY + 2), inputRect.maxY - lineHeight)
+        return CGRect(x: x, y: y, width: 2, height: lineHeight)
+    }
+
+    private func preferredCurrentAnchor(from exactRect: CGRect) -> CGRect {
+        if let recent = recentAnchorBounds(),
+           shouldPreferInputAnchor(recent, over: exactRect) {
+            return insertionAnchorRect(in: recent)
+        }
+
+        if let descendant = focusedTextEntryDescendantAnchor(),
+           shouldPreferInputAnchor(descendant, over: exactRect) {
+            return insertionAnchorRect(in: descendant)
+        }
+
+        if let interaction = recentInteractionAnchorBounds(),
+           shouldPreferInteractionAnchor(interaction, over: exactRect) {
+            return interaction
+        }
+
+        return exactRect
+    }
+
+    private func shouldPreferInputAnchor(_ inputRect: CGRect, over exactRect: CGRect) -> Bool {
+        guard isLikelyInputAnchor(inputRect), isUsableAnchor(exactRect) else { return false }
+        guard !isPlausibleCaretRect(exactRect) else { return false }
+
+        let expandedInput = inputRect.insetBy(dx: -36, dy: -48)
+        if expandedInput.intersects(exactRect) {
+            return false
+        }
+
+        if exactRect.width > 24 || exactRect.height > 72 {
+            return true
+        }
+
+        let verticalDistance = abs(exactRect.midY - inputRect.midY)
+        return verticalDistance > max(inputRect.height * 0.65, 90)
+    }
+
+    private func shouldPreferInteractionAnchor(_ interactionRect: CGRect, over exactRect: CGRect) -> Bool {
+        guard isUsableAnchor(exactRect) else { return true }
+        guard !isPlausibleCaretRect(exactRect) else { return false }
+        let expandedInteraction = interactionRect.insetBy(dx: -48, dy: -56)
+        if expandedInteraction.intersects(exactRect) {
+            return false
+        }
+        return abs(exactRect.midY - interactionRect.midY) > 120
+    }
+
+    private func isPlausibleCaretRect(_ rect: CGRect) -> Bool {
+        rect.width <= 24 && rect.height <= 72
+    }
+
     private func screenBounds(element: AXUIElement, range: CFRange) -> CGRect? {
         var targetRange = range
         let param = AXValueCreate(.cfRange, &targetRange)!
@@ -406,6 +599,22 @@ class TextContextProvider {
         return focusedElement
     }
 
+    private func focusedWindowElement(of app: AXUIElement) -> AXUIElement? {
+        var windowVal: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(app, kAXFocusedWindowAttribute as CFString, &windowVal) == .success,
+              let windowVal
+        else { return nil }
+        return (windowVal as! AXUIElement)
+    }
+
+    private func primaryWindowElement(of app: AXUIElement) -> AXUIElement? {
+        var windowsVal: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(app, kAXWindowsAttribute as CFString, &windowsVal) == .success,
+              let windows = windowsVal as? [AXUIElement]
+        else { return nil }
+        return windows.first
+    }
+
     private func firstTextEntryDescendant(of element: AXUIElement, maxDepth: Int) -> AXUIElement? {
         guard maxDepth > 0 else { return nil }
         var childrenVal: CFTypeRef?
@@ -422,6 +631,145 @@ class TextContextProvider {
             }
         }
         return nil
+    }
+
+    private func bestTextEntryDescendantBounds(
+        of element: AXUIElement,
+        maxDepth: Int,
+        containerBounds: CGRect?
+    ) -> CGRect? {
+        guard maxDepth > 0 else { return nil }
+        var candidates: [TextEntryCandidate] = []
+        collectTextEntryDescendantBounds(
+            of: element,
+            maxDepth: maxDepth,
+            containerBounds: containerBounds,
+            into: &candidates
+        )
+        let lowerHalfCandidates = candidates.filter { candidate in
+            guard let containerBounds else { return false }
+            return candidate.rect.midY >= containerBounds.midY
+        }
+        let ranked = lowerHalfCandidates.isEmpty ? candidates : lowerHalfCandidates
+
+        return ranked.sorted { lhs, rhs in
+            if lhs.score != rhs.score {
+                return lhs.score > rhs.score
+            }
+            if abs(lhs.rect.maxY - rhs.rect.maxY) > 8 {
+                return lhs.rect.maxY > rhs.rect.maxY
+            }
+            if abs(lhs.rect.height - rhs.rect.height) > 6 {
+                return lhs.rect.height < rhs.rect.height
+            }
+            return lhs.rect.width > rhs.rect.width
+        }.first?.rect
+    }
+
+    private func collectTextEntryDescendantBounds(
+        of element: AXUIElement,
+        maxDepth: Int,
+        containerBounds: CGRect?,
+        into candidates: inout [TextEntryCandidate]
+    ) {
+        guard maxDepth > 0 else { return }
+
+        if let rect = focusedElementBounds(element: element),
+           isLikelyInputAnchor(rect) {
+            let score = textEntryCandidateScore(element: element, rect: rect, containerBounds: containerBounds)
+            if score > 0 {
+                candidates.append(TextEntryCandidate(rect: rect, score: score))
+            }
+        }
+
+        var childrenVal: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenVal) == .success,
+              let children = childrenVal as? [AXUIElement]
+        else { return }
+
+        for child in children.prefix(220) {
+            collectTextEntryDescendantBounds(
+                of: child,
+                maxDepth: maxDepth - 1,
+                containerBounds: containerBounds,
+                into: &candidates
+            )
+        }
+    }
+
+    private func textEntryCandidateScore(
+        element: AXUIElement,
+        rect: CGRect,
+        containerBounds: CGRect?
+    ) -> Int {
+        var score = 0
+
+        if isTextEntryElement(element) { score += 60 }
+        let hintScore = textEntryHintScore(in: element)
+        score += hintScore
+
+        if rect.width >= 220 { score += 10 }
+        if rect.width >= 420 { score += 10 }
+        if rect.height >= 36 && rect.height <= 170 { score += 14 }
+        if rect.height > 210 { score -= 12 }
+
+        if let containerBounds {
+            let relativeMidY = (rect.midY - containerBounds.minY) / max(containerBounds.height, 1)
+            if relativeMidY >= 0.55 { score += 16 }
+            if relativeMidY >= 0.72 { score += 20 }
+            if relativeMidY >= 0.86 { score += 16 }
+            if rect.maxY > containerBounds.maxY - 260 { score += 16 }
+            if rect.width > containerBounds.width * 0.42 { score += 8 }
+            if rect.height > containerBounds.height * 0.45 { score -= 40 }
+        }
+
+        if isLikelyComposeInput(rect, containerBounds: containerBounds) {
+            score += 28
+        }
+
+        if hintScore < 0 { score -= 70 }
+        if !isTextEntryElement(element), hintScore == 0, !isLikelyComposeInput(rect, containerBounds: containerBounds) {
+            score -= 80
+        }
+
+        return score
+    }
+
+    private func textEntryHintScore(in element: AXUIElement) -> Int {
+        let fields = [
+            stringAttribute(kAXTitleAttribute as String, element: element),
+            stringAttribute(kAXDescriptionAttribute as String, element: element),
+            stringAttribute(kAXValueAttribute as String, element: element),
+            stringAttribute(kAXHelpAttribute as String, element: element),
+            stringAttribute("AXPlaceholderValue", element: element)
+        ]
+
+        let text = fields.compactMap { $0 }.joined(separator: " ").lowercased()
+        guard !text.isEmpty else { return 0 }
+
+        let composeHints = [
+            "yêu cầu", "yeu cau", "thay đổi", "thay doi", "tiếp theo", "tiep theo",
+            "nhập", "nhap", "tin nhắn", "tin nhan", "message", "prompt",
+            "reply", "ask", "type", "write", "comment"
+        ]
+        let searchHints = ["search", "tìm kiếm", "tim kiem", "find"]
+
+        if searchHints.contains(where: { text.contains($0) }) {
+            return -1
+        }
+        return composeHints.contains(where: { text.contains($0) }) ? 58 : 0
+    }
+
+    private func isLikelyComposeInput(_ rect: CGRect, containerBounds: CGRect?) -> Bool {
+        guard isUsableAnchor(rect),
+              rect.width >= 220,
+              rect.height >= 36,
+              rect.height <= 230
+        else { return false }
+
+        guard let containerBounds else { return true }
+        let relativeMidY = (rect.midY - containerBounds.minY) / max(containerBounds.height, 1)
+        return relativeMidY >= 0.58 && rect.maxY >= containerBounds.maxY - 340
     }
 
     private func isTextEntryElement(_ element: AXUIElement) -> Bool {
@@ -441,34 +789,66 @@ class TextContextProvider {
     }
 
     private func textEntryHint(in element: AXUIElement) -> Bool {
-        let fields = [
-            stringAttribute(kAXTitleAttribute as String, element: element),
-            stringAttribute(kAXDescriptionAttribute as String, element: element),
-            stringAttribute(kAXValueAttribute as String, element: element),
-            stringAttribute(kAXHelpAttribute as String, element: element),
-            stringAttribute("AXPlaceholderValue", element: element)
-        ]
-
-        let text = fields.compactMap { $0 }.joined(separator: " ").lowercased()
-        guard !text.isEmpty else { return false }
-
-        let hints = [
-            "nhập", "tin nhắn tới", "tìm kiếm",
-            "message", "type", "write", "reply", "comment", "search"
-        ]
-        if hints.contains(where: { text.contains($0) }) {
-            return true
-        }
-        return false
+        return textEntryHintScore(in: element) > 0
     }
 
     private func recentAnchorBounds() -> CGRect? {
         guard let recentInputAnchor,
               Date().timeIntervalSince(recentInputAnchor.timestamp) <= Self.recentAnchorLifetime,
-              let focusedApp = focusedApplication(),
-              processID(of: focusedApp) == recentInputAnchor.appPID
+              activeProcessID() == recentInputAnchor.appPID
         else { return nil }
         return recentInputAnchor.rect
+    }
+
+    private func recentInteractionAnchorBounds() -> CGRect? {
+        recentInteractionAnchorBounds(maxAge: Self.recentInteractionLifetime)
+    }
+
+    private func recentInteractionAnchorBounds(maxAge: TimeInterval) -> CGRect? {
+        guard let recentInteractionAnchor,
+              Date().timeIntervalSince(recentInteractionAnchor.timestamp) <= maxAge,
+              activeProcessID() == recentInteractionAnchor.appPID
+        else { return nil }
+
+        if let windowRect = recentInteractionAnchor.windowRect {
+            let relaxedWindow = windowRect.insetBy(dx: -24, dy: -24)
+            guard relaxedWindow.contains(recentInteractionAnchor.axPoint)
+            else { return nil }
+        }
+
+        return CGRect(
+            x: recentInteractionAnchor.axPoint.x,
+            y: recentInteractionAnchor.axPoint.y - 10,
+            width: 2,
+            height: 20
+        )
+    }
+
+    private func recentInteractionCocoaAnchorBounds(maxAge: TimeInterval) -> CGRect? {
+        guard let recentInteractionAnchor,
+              Date().timeIntervalSince(recentInteractionAnchor.timestamp) <= maxAge,
+              activeProcessID() == recentInteractionAnchor.appPID
+        else { return nil }
+
+        let point = recentInteractionAnchor.cocoaPoint
+        guard NSScreen.screens.contains(where: { $0.frame.insetBy(dx: -24, dy: -24).contains(point) })
+        else { return nil }
+
+        return CGRect(x: point.x, y: point.y - 10, width: 2, height: 20)
+    }
+
+    private func activeProcessID() -> pid_t? {
+        if let focusedApp = focusedApplication(),
+           let pid = processID(of: focusedApp) {
+            return pid
+        }
+        return NSWorkspace.shared.frontmostApplication?.processIdentifier
+    }
+
+    private func isPointInsideOwnVisibleWindow(_ point: CGPoint) -> Bool {
+        NSApp.windows.contains { window in
+            window.isVisible && window.frame.insetBy(dx: -6, dy: -6).contains(point)
+        }
     }
 
     private func processID(of element: AXUIElement) -> pid_t? {
@@ -502,6 +882,6 @@ class TextContextProvider {
         isUsableAnchor(rect)
             && rect.width >= 40
             && rect.height >= 18
-            && rect.height <= 180
+            && rect.height <= 280
     }
 }

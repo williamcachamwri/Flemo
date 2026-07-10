@@ -121,7 +121,7 @@ struct AppSettingsData: Codable {
         minTriggerLength = try container.decodeIfPresent(Int.self, forKey: .minTriggerLength) ?? 2
         inlineTriggerEnabled = try container.decodeIfPresent(Bool.self, forKey: .inlineTriggerEnabled) ?? true
         emojiBoardShortcut = try container.decodeIfPresent(ShortcutKey.self, forKey: .emojiBoardShortcut)
-            ?? ShortcutKey(keyCode: 0x00, modifiers: 0x0100)
+            ?? ShortcutKey(keyCode: 0x0E, modifiers: 0x0300)
         inlinePanelOpenMode = try container.decodeIfPresent(InlinePanelOpenMode.self, forKey: .inlinePanelOpenMode) ?? .recents
         inlineSuggestionLayout = try container.decodeIfPresent(InlineSuggestionLayout.self, forKey: .inlineSuggestionLayout) ?? .sleek
         popupTheme = try container.decodeIfPresent(PopupTheme.self, forKey: .popupTheme) ?? .nativeDark

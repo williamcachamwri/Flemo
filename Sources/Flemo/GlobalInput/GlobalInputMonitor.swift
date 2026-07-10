@@ -22,6 +22,7 @@ class GlobalInputMonitor: NSObject {
     var onTriggerCancelled: (() -> Void)?
     var onNavigateSuggestions: ((Int) -> Void)?
     var onConfirmSuggestion: (() -> Void)?
+    var onToggleQuickEmojiBoard: ((CGRect?) -> Void)?
     @Published var isMonitoring = false
 
     init(appState: AppState) {
@@ -106,7 +107,10 @@ class GlobalInputMonitor: NSObject {
                         return nil
                     }
                 case .leftMouseDown:
-                    if s.textProvider.rememberPotentialInputAnchor(at: event.location) {
+                    if s.textProvider.rememberPotentialInputAnchor(
+                        at: event.location,
+                        cocoaPoint: NSEvent.mouseLocation
+                    ) {
                         s.isTriggered = false
                         s.eventBuffer = ""
                         s.cancelSuggestions()
@@ -152,6 +156,15 @@ class GlobalInputMonitor: NSObject {
     // MARK: — Event-based buffer (fast path)
 
     private func processKeyEvent(_ event: NSEvent) -> Bool {
+        if isQuickEmojiBoardShortcut(event) {
+            resetTriggerSession()
+            cancelSuggestions()
+            DispatchQueue.main.async { [weak self] in
+                self?.onToggleQuickEmojiBoard?(nil)
+            }
+            return true
+        }
+
         guard appState.inlineTriggerEnabled else { return false }
         if RulesManager.shared.shouldSuppressInput(appState: appState) {
             resetTriggerSession()
@@ -262,6 +275,15 @@ class GlobalInputMonitor: NSObject {
 
     private func isNavigationKey(_ keyCode: UInt16) -> Bool {
         keyCode == 123 || keyCode == 124 || keyCode == 125 || keyCode == 126
+    }
+
+    private func isQuickEmojiBoardShortcut(_ event: NSEvent) -> Bool {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        return event.keyCode == 0x0E
+            && flags.contains(.command)
+            && flags.contains(.shift)
+            && !flags.contains(.option)
+            && !flags.contains(.control)
     }
 
     private func isPrivateControlString(_ string: String) -> Bool {

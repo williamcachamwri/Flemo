@@ -1023,9 +1023,9 @@ private struct KeybindsSettingsPane: View {
             HStack(spacing: 10) {
                 ShortcutFeatureTile(
                     icon: "face.smiling",
-                    title: "Emoji Board",
-                    subtitle: "Open library",
-                    keys: ["⌘", "E"]
+                    title: "Quick Board",
+                    subtitle: "Open near cursor",
+                    keys: ["⇧", "⌘", "E"]
                 )
 
                 ShortcutFeatureTile(
@@ -1045,9 +1045,9 @@ private struct KeybindsSettingsPane: View {
             }
 
             SettingsPanel(title: "Board", subtitle: "From anywhere in macOS") {
-                ShortcutCommandRow(icon: "face.smiling", title: "Open emoji board", keys: ["⌘", "E"])
+                ShortcutCommandRow(icon: "face.smiling", title: "Open quick emoji board", keys: ["⇧", "⌘", "E"])
                 SettingsDivider()
-                ShortcutCommandRow(icon: "magnifyingglass", title: "Search field", keys: ["Type"])
+                ShortcutCommandRow(icon: "magnifyingglass", title: "Search and insert", keys: ["Type", "Return"])
             }
         }
     }

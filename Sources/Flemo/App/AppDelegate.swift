@@ -11,6 +11,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var onboardingWindow: NSWindow?
     private var settingsWindow: NSWindow?
     private var emojiBoardWindow: NSWindow?
+    private var quickEmojiBoardPanel: QuickEmojiBoardPanel?
+    private var quickEmojiInsertionTarget: TextInsertionTarget?
     private var currentKeyword = ""
     private var currentSuggestionReplacesTrigger = false
     private let log = OSLog(subsystem: "com.flemo.app", category: "AppDelegate")
@@ -56,6 +58,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             globalInputMonitor.onConfirmSuggestion = { [weak self] in
                 self?.confirmSelectedSuggestion()
             }
+            globalInputMonitor.onToggleQuickEmojiBoard = { [weak self] anchorRect in
+                self?.toggleQuickEmojiBoard(anchorRect: anchorRect)
+            }
             globalInputMonitor.start()
 
             showOnboardingIfNeeded()
@@ -72,6 +77,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if window === onboardingWindow { onboardingWindow = nil }
         if window === settingsWindow { settingsWindow = nil }
         if window === emojiBoardWindow { emojiBoardWindow = nil }
+        if window === quickEmojiBoardPanel {
+            quickEmojiBoardPanel = nil
+            quickEmojiInsertionTarget = nil
+        }
         DispatchQueue.main.async { self.updateDockPolicy() }
     }
 
@@ -245,6 +254,65 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
         globalInputMonitor.resetTriggerSession()
         hideSuggestions()
+    }
+
+    @objc func toggleQuickEmojiBoard() {
+        toggleQuickEmojiBoard(anchorRect: nil)
+    }
+
+    private func toggleQuickEmojiBoard(anchorRect: CGRect?) {
+        if quickEmojiBoardPanel?.isVisible == true {
+            hideQuickEmojiBoard()
+            return
+        }
+
+        showQuickEmojiBoard(anchorRect: anchorRect)
+    }
+
+    private func showQuickEmojiBoard(anchorRect: CGRect?) {
+        hideSuggestions()
+        quickEmojiInsertionTarget = TextInsertionHelper.shared.captureFocusedTarget()
+
+        let view = QuickEmojiBoardView(
+            onSelect: { [weak self] emoji in
+                self?.insertQuickEmoji(emoji)
+            },
+            onDismiss: { [weak self] in
+                self?.hideQuickEmojiBoard()
+            }
+        )
+
+        let hostingView = NSHostingView(rootView: view)
+        hostingView.frame = NSRect(origin: .zero, size: NSSize(width: 318, height: 456))
+        hostingView.wantsLayer = true
+        hostingView.layer?.backgroundColor = NSColor.clear.cgColor
+
+        let panel = QuickEmojiBoardPanel(contentView: hostingView)
+        panel.delegate = self
+        quickEmojiBoardPanel = panel
+
+        if let anchorRect {
+            panel.show(belowAXRect: anchorRect)
+        } else if let anchor = TextContextProvider.shared.currentQuickEmojiAnchor() {
+            panel.show(near: anchor)
+        } else {
+            panel.showNearFocusedScreen()
+        }
+    }
+
+    private func insertQuickEmoji(_ emoji: Emoji) {
+        let target = quickEmojiInsertionTarget
+        hideQuickEmojiBoard()
+        hideSuggestions()
+        FrequencyTracker.shared.recordUsage(emoji: emoji)
+        TextInsertionHelper.shared.insertText(emoji.character, into: target)
+        globalInputMonitor.resetTriggerSession()
+    }
+
+    private func hideQuickEmojiBoard() {
+        quickEmojiBoardPanel?.orderOut(nil)
+        quickEmojiBoardPanel = nil
+        quickEmojiInsertionTarget = nil
     }
 
     @objc func toggleEmojiBoard() {
