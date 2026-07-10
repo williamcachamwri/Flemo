@@ -141,65 +141,323 @@ private struct GeneralSettingsPane: View {
     @ObservedObject private var launchAtLogin = LaunchAtLoginManager.shared
     @ObservedObject private var permissions = AccessibilityPermissionManager.shared
 
+    private var allPermissionsGranted: Bool {
+        permissions.accessibilityGranted
+            && permissions.inputMonitoringGranted
+            && permissions.automationGranted
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            ToggleRow(
-                icon: "power",
-                title: "Launch at Login",
-                subtitle: "Start automatically when logging in",
-                isOn: Binding(
-                    get: { launchAtLogin.isEnabled },
-                    set: { launchAtLogin.setEnabled($0) }
-                )
+        VStack(alignment: .leading, spacing: 14) {
+            SettingsStatusPanel(
+                icon: "bolt.horizontal.circle.fill",
+                title: allPermissionsGranted ? "Ready" : "Needs access",
+                subtitle: allPermissionsGranted
+                    ? "Flemo can watch for triggers and place emoji inline."
+                    : "Grant the missing macOS permissions to enable inline suggestions.",
+                status: allPermissionsGranted ? "Online" : "Action needed",
+                statusColor: allPermissionsGranted ? .green : .orange
             )
 
-            Divider().background(Color.white.opacity(0.06))
+            HStack(spacing: 10) {
+                PermissionStatusTile(
+                    icon: "lock.shield",
+                    title: "Accessibility",
+                    detail: "Cursor and focused text",
+                    granted: permissions.accessibilityGranted
+                ) {
+                    permissions.requestAccessibility()
+                }
 
-            StatusRow(
-                icon: "lock.shield",
-                title: "Accessibility",
-                subtitle: "Read focused text bounds and cursor position",
-                isGranted: permissions.accessibilityGranted
-            )
+                PermissionStatusTile(
+                    icon: "keyboard.badge.eye",
+                    title: "Input Monitor",
+                    detail: "Trigger and navigation keys",
+                    granted: permissions.inputMonitoringGranted
+                ) {
+                    permissions.requestInputMonitoring()
+                }
 
-            StatusRow(
-                icon: "keyboard.badge.eye",
-                title: "Input Monitoring",
-                subtitle: "Detect trigger text and arrow navigation",
-                isGranted: permissions.inputMonitoringGranted
-            )
-
-            StatusRow(
-                icon: "applescript",
-                title: "Automation",
-                subtitle: "Read browser URLs for site rules",
-                isGranted: permissions.automationGranted
-            )
-
-            ActionRow(
-                icon: "gearshape.2",
-                title: "Permissions Guide",
-                subtitle: "Open the macOS permission helper",
-                label: "Open"
-            ) {
-                permissions.showPermissionGuide()
+                PermissionStatusTile(
+                    icon: "applescript",
+                    title: "Automation",
+                    detail: "Browser URLs for rules",
+                    granted: permissions.automationGranted
+                ) {
+                    permissions.requestAutomation()
+                }
             }
 
-            Divider().background(Color.white.opacity(0.06))
+            SettingsPanel(title: "System", subtitle: "Startup and management") {
+                SettingControlRow(icon: "power", title: "Launch at Login", subtitle: "Start Flemo when macOS signs in") {
+                    Toggle("", isOn: Binding(
+                        get: { launchAtLogin.isEnabled },
+                        set: { launchAtLogin.setEnabled($0) }
+                    ))
+                    .toggleStyle(SwitchToggleStyle(tint: .accentColor))
+                    .labelsHidden()
+                    .controlSize(.small)
+                }
 
-            ActionRow(
-                icon: "face.smiling",
-                title: "Searchable Keywords",
-                subtitle: "Open the emoji board and keyword search",
-                label: "Customize"
-            ) {
-                (NSApplication.shared.delegate as? AppDelegate)?.toggleEmojiBoard()
+                SettingsDivider()
+
+                SettingControlRow(icon: "gearshape.2", title: "Permissions Guide", subtitle: "Open the macOS helper") {
+                    SmallActionButton(title: "Open", icon: "arrow.up.right") {
+                        permissions.showPermissionGuide()
+                    }
+                }
+
+                SettingsDivider()
+
+                SettingControlRow(icon: "face.smiling", title: "Emoji Board", subtitle: "Manage searchable keywords") {
+                    SmallActionButton(title: "Open", icon: "arrow.up.right") {
+                        (NSApplication.shared.delegate as? AppDelegate)?.toggleEmojiBoard()
+                    }
+                }
             }
         }
         .onAppear {
             launchAtLogin.refresh()
             permissions.refreshStatus()
         }
+    }
+}
+
+private struct SettingsStatusPanel: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let status: String
+    let statusColor: Color
+
+    var body: some View {
+        HStack(spacing: 13) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                statusColor.opacity(0.24),
+                                Color.cyan.opacity(0.10)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                Image(systemName: icon)
+                    .font(.system(size: 19, weight: .bold))
+                    .foregroundColor(statusColor)
+            }
+            .frame(width: 46, height: 46)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.white.opacity(0.13), lineWidth: 1)
+            )
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary.opacity(0.94))
+
+                Text(subtitle)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.68))
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            StatusPill(title: status, color: statusColor)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.black.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
+    }
+}
+
+private struct PermissionStatusTile: View {
+    let icon: String
+    let title: String
+    let detail: String
+    let granted: Bool
+    let action: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(granted ? .green : .orange)
+                    .frame(width: 30, height: 30)
+                    .background(
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .fill(Color.secondary.opacity(0.10))
+                    )
+
+                Spacer()
+
+                Image(systemName: granted ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(granted ? .green : .orange)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary.opacity(0.92))
+                    .lineLimit(1)
+
+                Text(detail)
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.62))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if granted {
+                Text("Granted")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundColor(.green)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule(style: .continuous).fill(Color.green.opacity(0.12)))
+            } else {
+                Button(action: action) {
+                    Label("Grant", systemImage: "arrow.up.right")
+                        .labelStyle(.titleAndIcon)
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(Capsule(style: .continuous).fill(Color.accentColor))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.black.opacity(0.075))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.white.opacity(granted ? 0.12 : 0.18), lineWidth: 1)
+        )
+    }
+}
+
+private struct StatusPill: View {
+    let title: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+            Text(title)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+        }
+        .foregroundColor(color)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .background(Capsule(style: .continuous).fill(color.opacity(0.12)))
+    }
+}
+
+private struct SettingsPanel<Content: View>: View {
+    let title: String
+    let subtitle: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary.opacity(0.92))
+                    Text(subtitle)
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .foregroundColor(.secondary.opacity(0.62))
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 12)
+            .padding(.bottom, 10)
+
+            SettingsDivider()
+
+            content
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.black.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
+    }
+}
+
+private struct SettingControlRow<Content: View>: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.secondary.opacity(0.74))
+                .frame(width: 28, height: 28)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.secondary.opacity(0.08))
+                )
+
+            RowText(title: title, subtitle: subtitle)
+
+            Spacer()
+
+            content
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+    }
+}
+
+private struct SmallActionButton: View {
+    let title: String
+    let icon: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .labelStyle(.titleAndIcon)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundColor(.primary.opacity(0.88))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.secondary.opacity(0.10))
+                )
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -778,56 +1036,93 @@ private struct RulesSettingsPane: View {
     @ObservedObject private var permissions = AccessibilityPermissionManager.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 14) {
             if !permissions.automationGranted {
-                PermissionBanner(
+                SettingsCallout(
                     icon: "applescript",
-                    title: "Automation Permission Required",
-                    subtitle: "Flemo needs Automation to detect which browser tab you\u{2019}re on for site rules to work."
+                    title: "Automation required",
+                    subtitle: "Site rules need browser URL access.",
+                    tint: .orange
                 ) {
                     permissions.requestAutomation()
                 }
             }
 
-            RuleSectionTitle("Ignored Sites")
-            RuleListBox {
+            HStack(spacing: 10) {
+                RuleSummaryTile(
+                    icon: "network",
+                    title: "Sites",
+                    value: "\(appState.ignoredSiteRules.count)",
+                    subtitle: "Domains"
+                )
+
+                RuleSummaryTile(
+                    icon: "app.dashed",
+                    title: "Apps",
+                    value: "\(appState.ignoredAppRules.count)",
+                    subtitle: "Applications"
+                )
+            }
+
+            RulePanel(
+                title: "Ignored Sites",
+                subtitle: "Silence Flemo on matching domains",
+                icon: "network",
+                actionTitle: "Add Site",
+                actionIcon: "plus"
+            ) {
+                addSite()
+            } content: {
                 if appState.ignoredSiteRules.isEmpty {
-                    RuleEmptyText("No ignored sites yet.")
+                    RuleEmptyState(
+                        icon: "network",
+                        title: "No ignored sites",
+                        subtitle: "Add domains where inline suggestions should stay quiet."
+                    )
                 } else {
-                    ForEach(appState.ignoredSiteRules) { rule in
-                        RuleRow(icon: "network", title: rule.domain, subtitle: "Domain and subdomains") {
+                    ForEach(appState.ignoredSiteRules.indices, id: \.self) { index in
+                        let rule = appState.ignoredSiteRules[index]
+                        ModernRuleRow(icon: "network", title: rule.domain, subtitle: "Domain and subdomains") {
                             withAnimation(.spring(response: 0.24, dampingFraction: 0.86)) {
                                 appState.removeIgnoredSite(rule)
                             }
                         }
-                    }
-                }
-            }
-            HStack {
-                Spacer()
-                RuleActionButton(title: "Add Site...", icon: "plus") {
-                    addSite()
-                }
-            }
 
-            RuleSectionTitle("Ignored Apps")
-            RuleListBox {
-                if appState.ignoredAppRules.isEmpty {
-                    RuleEmptyText("No ignored apps yet.")
-                } else {
-                    ForEach(appState.ignoredAppRules) { rule in
-                        RuleRow(icon: "app.dashed", title: rule.name, subtitle: rule.bundleIdentifier) {
-                            withAnimation(.spring(response: 0.24, dampingFraction: 0.86)) {
-                                appState.removeIgnoredApp(rule)
-                            }
+                        if index < appState.ignoredSiteRules.count - 1 {
+                            SettingsDivider()
                         }
                     }
                 }
             }
-            HStack {
-                Spacer()
-                RuleActionButton(title: "Add App...", icon: "plus") {
-                    addApp()
+
+            RulePanel(
+                title: "Ignored Apps",
+                subtitle: "Disable suggestions inside selected apps",
+                icon: "app.dashed",
+                actionTitle: "Add App",
+                actionIcon: "plus"
+            ) {
+                addApp()
+            } content: {
+                if appState.ignoredAppRules.isEmpty {
+                    RuleEmptyState(
+                        icon: "app.dashed",
+                        title: "No ignored apps",
+                        subtitle: "Choose apps where Flemo should not react to typing."
+                    )
+                } else {
+                    ForEach(appState.ignoredAppRules.indices, id: \.self) { index in
+                        let rule = appState.ignoredAppRules[index]
+                        ModernRuleRow(icon: "app.dashed", title: rule.name, subtitle: rule.bundleIdentifier) {
+                            withAnimation(.spring(response: 0.24, dampingFraction: 0.86)) {
+                                appState.removeIgnoredApp(rule)
+                            }
+                        }
+
+                        if index < appState.ignoredAppRules.count - 1 {
+                            SettingsDivider()
+                        }
+                    }
                 }
             }
         }
@@ -870,6 +1165,226 @@ private struct RulesSettingsPane: View {
 
         withAnimation(.spring(response: 0.24, dampingFraction: 0.86)) {
             appState.addIgnoredApp(rule)
+        }
+    }
+}
+
+private struct SettingsCallout: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let tint: Color
+    let action: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(tint)
+                .frame(width: 32, height: 32)
+                .background(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(tint.opacity(0.12))
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary.opacity(0.92))
+                Text(subtitle)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.66))
+            }
+
+            Spacer()
+
+            SmallActionButton(title: "Grant", icon: "arrow.up.right", action: action)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(tint.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(tint.opacity(0.22), lineWidth: 1)
+        )
+    }
+}
+
+private struct RuleSummaryTile: View {
+    let icon: String
+    let title: String
+    let value: String
+    let subtitle: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.secondary.opacity(0.78))
+                .frame(width: 34, height: 34)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.secondary.opacity(0.09))
+                )
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(value)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary.opacity(0.94))
+                Text(subtitle)
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.60))
+                    .textCase(.uppercase)
+            }
+
+            Spacer()
+
+            Text(title)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundColor(.secondary.opacity(0.64))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Capsule(style: .continuous).fill(Color.secondary.opacity(0.08)))
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.black.opacity(0.075))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
+    }
+}
+
+private struct RulePanel<Content: View>: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let actionTitle: String
+    let actionIcon: String
+    let action: () -> Void
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.secondary.opacity(0.72))
+                    .frame(width: 28, height: 28)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color.secondary.opacity(0.08))
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary.opacity(0.92))
+                    Text(subtitle)
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .foregroundColor(.secondary.opacity(0.62))
+                }
+
+                Spacer()
+
+                SmallActionButton(title: actionTitle, icon: actionIcon, action: action)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+
+            SettingsDivider()
+
+            VStack(spacing: 0) {
+                content
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.black.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
+    }
+}
+
+private struct RuleEmptyState: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.secondary.opacity(0.56))
+                .frame(width: 32, height: 32)
+                .background(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(Color.secondary.opacity(0.07))
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary.opacity(0.82))
+                Text(subtitle)
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.62))
+                    .lineLimit(2)
+            }
+
+            Spacer()
+        }
+        .padding(14)
+    }
+}
+
+private struct ModernRuleRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let remove: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.secondary.opacity(0.72))
+                .frame(width: 28, height: 28)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.secondary.opacity(isHovered ? 0.12 : 0.07))
+                )
+
+            RowText(title: title, subtitle: subtitle)
+
+            Spacer()
+
+            Button(action: remove) {
+                Image(systemName: "trash")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(isHovered ? .red.opacity(0.90) : .secondary.opacity(0.70))
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill(Color.secondary.opacity(isHovered ? 0.12 : 0.08)))
+            }
+            .buttonStyle(.plain)
+            .help("Remove")
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.12)) { isHovered = hovering }
         }
     }
 }
@@ -1016,59 +1531,52 @@ private struct AboutSettingsPane: View {
     @ObservedObject private var updater = UpdateChecker.shared
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                AppLogoImage(size: 48)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Flemo")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                    Text("Inline emoji picker for macOS")
-                        .font(.system(size: 11, weight: .regular, design: .rounded))
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 16)
+        VStack(alignment: .leading, spacing: 14) {
+            AboutIdentityPanel(version: versionString)
 
-            Divider().background(Color.white.opacity(0.06))
-
-            MetricRow(icon: "tag", title: "Version", value: versionString)
-            MetricRow(icon: "face.smiling", title: "Emoji Library", value: "\(EmojiDataLoader.shared.allEmojis.count)")
-            MetricRow(icon: "shippingbox", title: "Bundle", value: bundleIdentifier)
-
-            Divider().background(Color.white.opacity(0.06))
-
-            ActionRow(
-                icon: "doc.text",
-                title: "Release Notes",
-                subtitle: updater.latestRelease.map { "Latest: v\($0.version)" } ?? "Browse version history",
-                label: "View"
-            ) {
-                showingUpdateSheet = true
-                updater.check()
+            HStack(spacing: 10) {
+                AboutMetricTile(icon: "tag", title: "Version", value: versionString)
+                AboutMetricTile(icon: "face.smiling", title: "Emoji", value: "\(EmojiDataLoader.shared.allEmojis.count)")
+                AboutMetricTile(icon: "shippingbox", title: "Bundle", value: bundleShortName)
             }
 
-            Divider().background(Color.white.opacity(0.06))
-
-            Button {
-                if let url = URL(string: "https://github.com/williamcachamwri/Flemo") {
-                    NSWorkspace.shared.open(url)
-                }
-            } label: {
-                ValueRow(icon: "chevron.left.forwardslash.chevron.right", title: "GitHub", subtitle: "") {
-                    HStack(spacing: 4) {
-                        Text("williamcachamwri/Flemo")
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundColor(.secondary.opacity(0.7))
-                            .lineLimit(1)
-                        Image(systemName: "arrow.up.right.square.fill")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(.secondary.opacity(0.6))
+            SettingsPanel(title: "Project", subtitle: "Release and source") {
+                SettingControlRow(
+                    icon: "doc.text",
+                    title: "Release Notes",
+                    subtitle: updater.latestRelease.map { "Latest v\($0.version)" } ?? "Browse version history"
+                ) {
+                    SmallActionButton(title: "View", icon: "arrow.up.right") {
+                        showingUpdateSheet = true
+                        updater.check()
                     }
                 }
+
+                SettingsDivider()
+
+                SettingControlRow(
+                    icon: "chevron.left.forwardslash.chevron.right",
+                    title: "GitHub",
+                    subtitle: "williamcachamwri/Flemo"
+                ) {
+                    SmallActionButton(title: "Open", icon: "arrow.up.right") {
+                        if let url = URL(string: "https://github.com/williamcachamwri/Flemo") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                }
+
+                SettingsDivider()
+
+                SettingControlRow(icon: "doc.on.doc", title: "Bundle Identifier", subtitle: bundleIdentifier) {
+                    Text(bundleIdentifier)
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary.opacity(0.68))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .frame(maxWidth: 180, alignment: .trailing)
+                }
             }
-            .buttonStyle(.plain)
         }
         .sheet(isPresented: $showingUpdateSheet) {
             ReleaseNotesView()
@@ -1084,6 +1592,108 @@ private struct AboutSettingsPane: View {
 
     private var bundleIdentifier: String {
         Bundle.main.bundleIdentifier ?? "com.flemo.app"
+    }
+
+    private var bundleShortName: String {
+        bundleIdentifier
+            .split(separator: ".")
+            .last
+            .map(String.init) ?? "app"
+    }
+}
+
+private struct AboutIdentityPanel: View {
+    let version: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+            AppLogoImage(size: 58)
+                .shadow(color: .black.opacity(0.18), radius: 10, y: 5)
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Text("Flemo")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary.opacity(0.96))
+
+                    Text("v\(version)")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundColor(.secondary.opacity(0.72))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Capsule(style: .continuous).fill(Color.secondary.opacity(0.10)))
+                }
+
+                Text("Inline emoji picker for macOS")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.68))
+            }
+
+            Spacer()
+        }
+        .padding(15)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.08),
+                            Color.black.opacity(0.06)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
+    }
+}
+
+private struct AboutMetricTile: View {
+    let icon: String
+    let title: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.secondary.opacity(0.78))
+                    .frame(width: 28, height: 28)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color.secondary.opacity(0.08))
+                    )
+                Spacer()
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(value)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary.opacity(0.92))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+
+                Text(title)
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.60))
+                    .textCase(.uppercase)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.black.opacity(0.075))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
     }
 }
 
