@@ -169,6 +169,13 @@ private struct GeneralSettingsPane: View {
                 isGranted: permissions.inputMonitoringGranted
             )
 
+            StatusRow(
+                icon: "applescript",
+                title: "Automation",
+                subtitle: "Read browser URLs for site rules",
+                isGranted: permissions.automationGranted
+            )
+
             ActionRow(
                 icon: "gearshape.2",
                 title: "Permissions Guide",
@@ -768,9 +775,20 @@ private struct KeybindsSettingsPane: View {
 
 private struct RulesSettingsPane: View {
     @ObservedObject private var appState = AppState.shared
+    @ObservedObject private var permissions = AccessibilityPermissionManager.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
+            if !permissions.automationGranted {
+                PermissionBanner(
+                    icon: "applescript",
+                    title: "Automation Permission Required",
+                    subtitle: "Flemo needs Automation to detect which browser tab you\u{2019}re on for site rules to work."
+                ) {
+                    permissions.requestAutomation()
+                }
+            }
+
             RuleSectionTitle("Ignored Sites")
             RuleListBox {
                 if appState.ignoredSiteRules.isEmpty {
@@ -812,6 +830,9 @@ private struct RulesSettingsPane: View {
                     addApp()
                 }
             }
+        }
+        .onAppear {
+            permissions.refreshStatus()
         }
     }
 
@@ -1425,6 +1446,57 @@ private struct VisualEffectMaterialView: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
         nsView.material = .hudWindow
+    }
+}
+
+private struct PermissionBanner: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let action: () -> Void
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.orange)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                    Text(subtitle)
+                        .font(.system(size: 11, weight: .regular, design: .rounded))
+                        .foregroundColor(.secondary.opacity(0.7))
+                }
+
+                Spacer()
+
+                Button(action: action) {
+                    Text("Grant")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(Color.accentColor)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.orange.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.orange.opacity(0.24), lineWidth: 1)
+        )
     }
 }
 

@@ -7,6 +7,7 @@ class AccessibilityPermissionManager: NSObject, ObservableObject {
     private let log = OSLog(subsystem: "com.flemo.app", category: "Permission")
     @Published var accessibilityGranted: Bool = false
     @Published var inputMonitoringGranted: Bool = false
+    @Published var automationGranted: Bool = false
 
     override private init() {
         super.init()
@@ -30,12 +31,14 @@ class AccessibilityPermissionManager: NSObject, ObservableObject {
     }
 
     @discardableResult
-    func refreshStatus() -> (accessibility: Bool, inputMonitoring: Bool) {
+    func refreshStatus() -> (accessibility: Bool, inputMonitoring: Bool, automation: Bool) {
         let ax = hasAccessibility()
         let im = hasInputMonitoring()
+        let am = hasAutomation()
         let update = {
             self.accessibilityGranted = ax
             self.inputMonitoringGranted = im
+            self.automationGranted = am
         }
         if Thread.isMainThread {
             update()
@@ -44,7 +47,8 @@ class AccessibilityPermissionManager: NSObject, ObservableObject {
         }
         if ax { os_log(.info, log: log, "Accessibility granted") }
         if im { os_log(.info, log: log, "Input monitoring granted") }
-        return (ax, im)
+        if am { os_log(.info, log: log, "Automation granted") }
+        return (ax, im, am)
     }
 
     func hasAccessibility() -> Bool {
@@ -77,11 +81,40 @@ class AccessibilityPermissionManager: NSObject, ObservableObject {
         refreshStatus()
     }
 
+    func hasAutomation() -> Bool {
+        let script = NSAppleScript(source: """
+            tell application id "com.apple.finder"
+                return name
+            end tell
+            """)
+        var error: NSDictionary?
+        script?.executeAndReturnError(&error)
+        return error == nil
+    }
+
+    func requestAutomation() {
+        guard !hasAutomation() else {
+            refreshStatus()
+            return
+        }
+        let script = NSAppleScript(source: """
+            tell application id "com.apple.finder"
+                return name
+            end tell
+            """)
+        var error: NSDictionary?
+        script?.executeAndReturnError(&error)
+        refreshStatus()
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
     func showPermissionGuide() {
         let alert = NSAlert()
         alert.messageText = "Flemo Needs Permissions"
         alert.informativeText = """
-        To detect keystrokes and show inline emoji suggestions, Flemo needs TWO permissions:
+        To detect keystrokes and show inline emoji suggestions, Flemo needs THREE permissions:
 
         1. Accessibility — for reading text and cursor position:
            System Settings → Privacy & Security → Accessibility
@@ -91,11 +124,16 @@ class AccessibilityPermissionManager: NSObject, ObservableObject {
            System Settings → Privacy & Security → Input Monitoring
            → Add /Applications/Flemo.app, toggle ON.
 
-        After granting both, return to Flemo. It will retry automatically.
+        3. Automation — for reading the browser URL to apply site rules:
+           System Settings → Privacy & Security → Automation
+           → Add /Applications/Flemo.app, check all browsers.
+
+        After granting all, return to Flemo. It will retry automatically.
         """
         alert.alertStyle = .informational
         alert.addButton(withTitle: "Open Accessibility")
         alert.addButton(withTitle: "Open Input Monitoring")
+        alert.addButton(withTitle: "Open Automation")
         alert.addButton(withTitle: "Later")
         let response = alert.runModal()
         if response == .alertFirstButtonReturn {
@@ -106,12 +144,17 @@ class AccessibilityPermissionManager: NSObject, ObservableObject {
             if let u = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
                 NSWorkspace.shared.open(u)
             }
+        } else if response == .alertThirdButtonReturn {
+            if let u = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation") {
+                NSWorkspace.shared.open(u)
+            }
         }
     }
 
     func statusDescription() -> String {
         let ax = hasAccessibility() ? "✅" : "❌"
         let im = hasInputMonitoring() ? "✅" : "❌"
-        return "Accessibility: \(ax)\nInput Monitoring: \(im)"
+        let am = hasAutomation() ? "✅" : "❌"
+        return "Accessibility: \(ax)\nInput Monitoring: \(im)\nAutomation: \(am)"
     }
 }

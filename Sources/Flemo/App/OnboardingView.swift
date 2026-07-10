@@ -177,10 +177,19 @@ struct OnboardingView: View {
                 ) {
                     permissions.requestInputMonitoring()
                 }
+
+                PermissionCard(
+                    icon: "applescript",
+                    title: "Automation",
+                    detail: "Browser URLs for site rules",
+                    granted: permissions.automationGranted
+                ) {
+                    permissions.requestAutomation()
+                }
             }
             .frame(maxWidth: 360)
 
-            if !permissions.accessibilityGranted || !permissions.inputMonitoringGranted {
+            if !permissions.accessibilityGranted || !permissions.inputMonitoringGranted || !permissions.automationGranted {
                 Button {
                     permissions.showPermissionGuide()
                 } label: {

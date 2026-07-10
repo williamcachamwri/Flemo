@@ -28,5 +28,7 @@
     <string>NSApplication</string>
     <key>NSInputMonitoringUsageDescription</key>
     <string>Flemo needs Input Monitoring to detect keyboard events for inline emoji suggestions.</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>Flemo needs Automation to read browser URLs so site rules can suppress suggestions on specific domains.</string>
 </dict>
 </plist>
