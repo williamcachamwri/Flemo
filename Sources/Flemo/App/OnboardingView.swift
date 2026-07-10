@@ -400,6 +400,7 @@ private struct EmojiBurstView: View {
 
     var body: some View {
         GeometryReader { geo in
+            let w = geo.size.width
             let h = geo.size.height
 
             ZStack {
@@ -424,32 +425,33 @@ private struct EmojiBurstView: View {
                     .scaleEffect(burstPhase ? 1 : 0.92)
                     .opacity(burstPhase ? 1 : 0)
             }
+            .frame(width: w, height: h)
 
             VStack(spacing: 9) {
-                Spacer().frame(height: h * 0.68)
+                Spacer().frame(height: h * 0.72)
                 Text("Flemo")
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
                 Text("Inline emoji that follows your typing.")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundColor(.secondary.opacity(0.72))
                     .multilineTextAlignment(.center)
-                Spacer().frame(height: 6)
+                Spacer().frame(height: 4)
                 HStack(spacing: 8) {
                     Text(appState.triggerCharacter)
-                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
                         .foregroundColor(.primary.opacity(0.9))
-                        .frame(width: 24, height: 24)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.black.opacity(0.18)))
-                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.16)))
+                        .frame(width: 22, height: 22)
+                        .background(RoundedRectangle(cornerRadius: 5).fill(Color.black.opacity(0.18)))
+                        .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.white.opacity(0.16)))
                     Text("type a word to summon emoji anywhere")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
                         .foregroundColor(.secondary.opacity(0.68))
                 }
-                .padding(.horizontal, 16).padding(.vertical, 9)
+                .padding(.horizontal, 14).padding(.vertical, 8)
                 .background(Capsule().fill(Color.secondary.opacity(0.10)))
             }
             .opacity(textPhase ? 1 : 0)
-            .frame(maxWidth: .infinity)
+            .frame(width: w)
         }
         .onAppear {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.72)) {
