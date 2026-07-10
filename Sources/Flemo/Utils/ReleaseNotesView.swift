@@ -101,10 +101,8 @@ struct ReleaseNotesView: View {
             }
 
             if !release.body.isEmpty {
-                Text(markdownString(release.body))
-                    .font(.system(size: 11, design: .rounded))
-                    .foregroundColor(.secondary.opacity(0.85))
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                MarkdownView(markdown: release.body)
+                    .frame(maxWidth: .infinity, minHeight: 20)
             }
 
             if release.tagName == updater.latestRelease?.tagName,
@@ -183,6 +181,47 @@ struct ReleaseNotesView: View {
 
     private var currentVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+    }
+}
+
+private struct MarkdownView: NSViewRepresentable {
+    let markdown: String
+
+    func makeNSView(context: Context) -> NSTextView {
+        let tv = NSTextView()
+        tv.isEditable = false
+        tv.isSelectable = true
+        tv.drawsBackground = false
+        tv.textContainer?.lineFragmentPadding = 0
+        tv.textContainer?.containerSize = NSSize(width: 428, height: CGFloat.greatestFiniteMagnitude)
+        tv.isVerticallyResizable = true
+        tv.autoresizingMask = [.width]
+        tv.textContainer?.widthTracksTextView = true
+        return tv
+    }
+
+    func updateNSView(_ tv: NSTextView, context: Context) {
+        do {
+            let attr = try AttributedString(
+                markdown: markdown,
+                options: .init(allowsExtendedAttributes: true)
+            )
+            let ns = NSAttributedString(attr)
+            let full = NSRange(location: 0, length: ns.length)
+            let mutable = NSMutableAttributedString(attributedString: ns)
+
+            let para = NSMutableParagraphStyle()
+            para.lineSpacing = 3
+            para.paragraphSpacing = 6
+            mutable.addAttribute(.paragraphStyle, value: para, range: full)
+
+            tv.textStorage?.setAttributedString(mutable)
+        } catch {
+            tv.textStorage?.setAttributedString(NSAttributedString(
+                string: markdown,
+                attributes: [.font: NSFont.systemFont(ofSize: 11)]
+            ))
+        }
     }
 }
 
