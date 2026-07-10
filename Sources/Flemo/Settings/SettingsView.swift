@@ -1016,18 +1016,214 @@ private extension AnyTransition {
 }
 
 private struct KeybindsSettingsPane: View {
-    @ObservedObject private var appState = AppState.shared
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ShortcutHeroPanel()
+
+            HStack(spacing: 10) {
+                ShortcutFeatureTile(
+                    icon: "face.smiling",
+                    title: "Emoji Board",
+                    subtitle: "Open library",
+                    keys: ["⌘", "E"]
+                )
+
+                ShortcutFeatureTile(
+                    icon: "return",
+                    title: "Insert",
+                    subtitle: "Use selected emoji",
+                    keys: ["Tab"]
+                )
+            }
+
+            SettingsPanel(title: "Inline Suggestions", subtitle: "When the popup is visible") {
+                ShortcutCommandRow(icon: "return", title: "Insert selected emoji", keys: ["Tab"])
+                SettingsDivider()
+                ShortcutCommandRow(icon: "arrow.left.arrow.right", title: "Move selection", keys: ["←", "→"])
+                SettingsDivider()
+                ShortcutCommandRow(icon: "escape", title: "Dismiss suggestions", keys: ["Esc"])
+            }
+
+            SettingsPanel(title: "Board", subtitle: "From anywhere in macOS") {
+                ShortcutCommandRow(icon: "face.smiling", title: "Open emoji board", keys: ["⌘", "E"])
+                SettingsDivider()
+                ShortcutCommandRow(icon: "magnifyingglass", title: "Search field", keys: ["Type"])
+            }
+        }
+    }
+}
+
+private struct ShortcutHeroPanel: View {
+    var body: some View {
+        HStack(spacing: 13) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.accentColor.opacity(0.24),
+                                Color.cyan.opacity(0.12)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                Image(systemName: "command.circle.fill")
+                    .font(.system(size: 21, weight: .bold))
+                    .foregroundColor(.accentColor)
+            }
+            .frame(width: 46, height: 46)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.white.opacity(0.13), lineWidth: 1)
+            )
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Keyboard Flow")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary.opacity(0.94))
+
+                Text("Fast paths for inline suggestions and the emoji board.")
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.68))
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            HStack(spacing: 5) {
+                KeyCap("⌘")
+                KeyCap("E")
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.black.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
+    }
+}
+
+private struct ShortcutFeatureTile: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let keys: [String]
 
     var body: some View {
-        VStack(spacing: 0) {
-            ShortcutRow(icon: "return", title: "Insert Selected Emoji", shortcut: "Tab")
-            ShortcutRow(icon: "arrow.left.arrow.right", title: "Move Selection", shortcut: "← / →")
-            ShortcutRow(icon: "escape", title: "Dismiss Suggestions", shortcut: "Esc")
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.secondary.opacity(0.78))
+                    .frame(width: 32, height: 32)
+                    .background(
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .fill(Color.secondary.opacity(0.09))
+                    )
 
-            Divider().background(Color.white.opacity(0.06))
+                Spacer()
 
-            ShortcutRow(icon: "face.smiling", title: "Emoji Board", shortcut: "⌘E")
+                HStack(spacing: 5) {
+                    ForEach(keys, id: \.self) { key in
+                        KeyCap(key)
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary.opacity(0.92))
+                Text(subtitle)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.62))
+            }
         }
+        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: 106, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.black.opacity(0.075))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
+    }
+}
+
+private struct ShortcutCommandRow: View {
+    let icon: String
+    let title: String
+    let keys: [String]
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.secondary.opacity(0.74))
+                .frame(width: 28, height: 28)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.secondary.opacity(0.08))
+                )
+
+            Text(title)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundColor(.primary.opacity(0.88))
+
+            Spacer()
+
+            HStack(spacing: 5) {
+                ForEach(keys, id: \.self) { key in
+                    KeyCap(key)
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+    }
+}
+
+private struct KeyCap: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 11, weight: .bold, design: .rounded))
+            .foregroundColor(.primary.opacity(0.88))
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
+            .frame(minWidth: 28, minHeight: 24)
+            .padding(.horizontal, text.count > 2 ? 7 : 0)
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.12),
+                                Color.black.opacity(0.06)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.10), radius: 4, y: 2)
     }
 }
 
@@ -1495,34 +1691,299 @@ private struct RuleActionButton: View {
 private struct StatsSettingsPane: View {
     @State private var snapshot = FrequencyTracker.shared.statsSnapshot(limit: 6)
 
+    private var maxTopCount: Int {
+        max(snapshot.topEmoji.map { $0.count }.max() ?? 0, 1)
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            MetricRow(icon: "sum", title: "Total Emoji Inserts", value: "\(snapshot.totalUsage)")
-            MetricRow(icon: "number.square", title: "Tracked Emojis", value: "\(snapshot.trackedEmojiCount)")
+        VStack(alignment: .leading, spacing: 14) {
+            StatsHeroPanel(snapshot: snapshot)
 
-            Divider().background(Color.white.opacity(0.06))
-
-            if snapshot.topEmoji.isEmpty {
-                ValueRow(icon: "chart.bar.xaxis", title: "Favorites", subtitle: "No usage yet") {
-                    Text("0")
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundColor(.secondary.opacity(0.7))
-                }
-            } else {
-                ForEach(snapshot.topEmoji) { stat in
-                    EmojiUsageRow(stat: stat)
-                }
+            HStack(spacing: 10) {
+                StatsMetricTile(icon: "sum", title: "Inserts", value: "\(snapshot.totalUsage)")
+                StatsMetricTile(icon: "number.square", title: "Tracked", value: "\(snapshot.trackedEmojiCount)")
+                StatsMetricTile(icon: "crown", title: "Top Count", value: "\(snapshot.topEmoji.first?.count ?? 0)")
             }
 
-            Divider().background(Color.white.opacity(0.06))
-
-            ActionRow(icon: "arrow.clockwise", title: "Refresh Stats", subtitle: "Reload local usage data", label: "Refresh") {
+            StatsTopEmojiPanel(snapshot: snapshot, maxCount: maxTopCount) {
                 snapshot = FrequencyTracker.shared.statsSnapshot(limit: 6)
             }
         }
         .onAppear {
             snapshot = FrequencyTracker.shared.statsSnapshot(limit: 6)
         }
+    }
+}
+
+private struct StatsHeroPanel: View {
+    let snapshot: FrequencyStatsSnapshot
+
+    var body: some View {
+        HStack(spacing: 13) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.accentColor.opacity(0.24),
+                                Color.green.opacity(0.12)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                Image(systemName: "chart.bar.xaxis")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.accentColor)
+            }
+            .frame(width: 46, height: 46)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.white.opacity(0.13), lineWidth: 1)
+            )
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Usage Snapshot")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary.opacity(0.94))
+
+                Text(snapshot.totalUsage == 0
+                    ? "Emoji usage appears after inserts."
+                    : "Flemo uses this history to surface better suggestions.")
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.68))
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            StatusPill(
+                title: snapshot.totalUsage == 0 ? "No data" : "Learning",
+                color: snapshot.totalUsage == 0 ? .secondary : .green
+            )
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.black.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
+    }
+}
+
+private struct StatsMetricTile: View {
+    let icon: String
+    let title: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.secondary.opacity(0.78))
+                    .frame(width: 30, height: 30)
+                    .background(
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .fill(Color.secondary.opacity(0.09))
+                    )
+
+                Spacer()
+            }
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(value)
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary.opacity(0.94))
+                    .lineLimit(1)
+
+                Text(title)
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.60))
+                    .textCase(.uppercase)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: 104, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.black.opacity(0.075))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
+    }
+}
+
+private struct StatsTopEmojiPanel: View {
+    let snapshot: FrequencyStatsSnapshot
+    let maxCount: Int
+    let refresh: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Image(systemName: "flame")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.secondary.opacity(0.72))
+                    .frame(width: 28, height: 28)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color.secondary.opacity(0.08))
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Top Emoji")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary.opacity(0.92))
+                    Text("Most used suggestions")
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .foregroundColor(.secondary.opacity(0.62))
+                }
+
+                Spacer()
+
+                SmallActionButton(title: "Refresh", icon: "arrow.clockwise", action: refresh)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+
+            SettingsDivider()
+
+            if snapshot.topEmoji.isEmpty {
+                StatsEmptyState()
+            } else {
+                ForEach(snapshot.topEmoji.indices, id: \.self) { index in
+                    ModernEmojiUsageRow(stat: snapshot.topEmoji[index], maxCount: maxCount)
+
+                    if index < snapshot.topEmoji.count - 1 {
+                        SettingsDivider()
+                    }
+                }
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.black.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
+    }
+}
+
+private struct ModernEmojiUsageRow: View {
+    let stat: EmojiUsageStat
+    let maxCount: Int
+
+    private var progress: CGFloat {
+        guard maxCount > 0 else { return 0 }
+        return CGFloat(stat.count) / CGFloat(maxCount)
+    }
+
+    var body: some View {
+        let colors = EmojiColorExtractor.shared.colors(for: stat.emoji.character)
+
+        HStack(spacing: 12) {
+            Text(stat.emoji.character)
+                .font(.system(size: 24))
+                .frame(width: 38, height: 38)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    colors[0].opacity(0.28),
+                                    colors[1].opacity(0.14)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                )
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(displayName(for: stat.emoji))
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary.opacity(0.90))
+                        .lineLimit(1)
+
+                    Spacer()
+
+                    Text("\(stat.count)")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(.secondary.opacity(0.72))
+                }
+
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule(style: .continuous)
+                            .fill(Color.secondary.opacity(0.10))
+
+                        Capsule(style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        colors[0].opacity(0.82),
+                                        colors[1].opacity(0.68)
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: max(8, proxy.size.width * min(progress, 1)))
+                    }
+                }
+                .frame(height: 5)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
+    private func displayName(for emoji: Emoji) -> String {
+        emoji.name
+            .split(separator: " ")
+            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            .joined(separator: " ")
+    }
+}
+
+private struct StatsEmptyState: View {
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "chart.bar.xaxis")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.secondary.opacity(0.56))
+                .frame(width: 34, height: 34)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.secondary.opacity(0.07))
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("No usage yet")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary.opacity(0.82))
+                Text("Inserted emoji will show up here.")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.62))
+            }
+
+            Spacer()
+        }
+        .padding(14)
     }
 }
 
