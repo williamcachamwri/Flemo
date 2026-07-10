@@ -36,7 +36,11 @@ struct EmojiBoardView: View {
     }
 
     private var displayEmojis: [Emoji] {
-        EmojiDataLoader.shared.preferredEmojis(skinTone: appState.preferredSkinTone)
+        EmojiDataLoader.shared.preferredEmojis(
+            personSkinTone: appState.personSkinTone,
+            manSkinTone: appState.manSkinTone,
+            womanSkinTone: appState.womanSkinTone
+        )
     }
 
     private var filteredEmojis: [Emoji] {
@@ -85,11 +89,17 @@ struct EmojiBoardView: View {
         }
         .frame(width: 620, height: 520)
         .onAppear { rebuildCounts() }
-        .onChange(of: appState.preferredSkinTone) { _, _ in rebuildCounts() }
+        .onChange(of: appState.personSkinTone) { _, _ in rebuildCounts() }
+        .onChange(of: appState.manSkinTone) { _, _ in rebuildCounts() }
+        .onChange(of: appState.womanSkinTone) { _, _ in rebuildCounts() }
     }
 
     private func rebuildCounts() {
-        let emojis = EmojiDataLoader.shared.preferredEmojis(skinTone: appState.preferredSkinTone)
+        let emojis = EmojiDataLoader.shared.preferredEmojis(
+            personSkinTone: appState.personSkinTone,
+            manSkinTone: appState.manSkinTone,
+            womanSkinTone: appState.womanSkinTone
+        )
         var counts: [String: Int] = ["All": emojis.count]
         for emoji in emojis {
             counts[emoji.category, default: 0] += 1

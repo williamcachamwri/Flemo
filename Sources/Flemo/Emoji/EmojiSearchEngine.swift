@@ -43,7 +43,9 @@ class EmojiSearchEngine {
         scored.sort { $0.1 > $1.1 }
         let preferred = EmojiSkinToneNormalizer.preferredEmojis(
             from: scored.map { $0.0 },
-            skinTone: AppSettings.shared.preferredSkinTone
+            personSkinTone: AppSettings.shared.personSkinTone,
+            manSkinTone: AppSettings.shared.manSkinTone,
+            womanSkinTone: AppSettings.shared.womanSkinTone
         )
         return Array(preferred.prefix(maxResults))
     }
@@ -92,7 +94,9 @@ class EmojiSearchEngine {
                 let preferred = EmojiSkinToneNormalizer.preferredReplacement(
                     for: emoji,
                     in: dataLoader.allEmojis,
-                    skinTone: AppSettings.shared.preferredSkinTone
+                    personSkinTone: AppSettings.shared.personSkinTone,
+                    manSkinTone: AppSettings.shared.manSkinTone,
+                    womanSkinTone: AppSettings.shared.womanSkinTone
                 )
                 let key = EmojiSkinToneNormalizer.baseKey(for: preferred.character)
                 guard !seen.contains(key) else { continue }
@@ -102,7 +106,11 @@ class EmojiSearchEngine {
             }
         }
         if result.isEmpty {
-            result = Array(dataLoader.preferredEmojis(skinTone: AppSettings.shared.preferredSkinTone).prefix(limit))
+            result = Array(dataLoader.preferredEmojis(
+                personSkinTone: AppSettings.shared.personSkinTone,
+                manSkinTone: AppSettings.shared.manSkinTone,
+                womanSkinTone: AppSettings.shared.womanSkinTone
+            ).prefix(limit))
         }
         return result
     }

@@ -2,7 +2,7 @@ import Cocoa
 import SwiftUI
 import os.log
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var menuBarManager: MenuBarManager!
     private var globalInputMonitor: GlobalInputMonitor!
     private var overlayPanel: OverlayPanel!
@@ -19,6 +19,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         os_log(.info, log: log, "App launched")
+
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(managedWindowWillClose(_:)),
+            name: NSWindow.willCloseNotification, object: nil
+        )
 
         DispatchQueue.main.async { [self] in
             appState.syncFromSettings()
@@ -62,6 +67,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         globalInputMonitor.refreshPermissionsAndRetry()
     }
 
+    @objc private func managedWindowWillClose(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow else { return }
+        if window === onboardingWindow { onboardingWindow = nil }
+        if window === settingsWindow { settingsWindow = nil }
+        if window === emojiBoardWindow { emojiBoardWindow = nil }
+        DispatchQueue.main.async { self.updateDockPolicy() }
+    }
+
+    private func updateDockPolicy() {
+        let hasVisible = onboardingWindow?.isVisible == true
+            || settingsWindow?.isVisible == true
+            || emojiBoardWindow?.isVisible == true
+        NSApp.setActivationPolicy(hasVisible ? .regular : .accessory)
+    }
+
     private func showOnboardingIfNeeded() {
         let hasSeen = UserDefaults.standard.bool(forKey: "hasSeenOnboarding")
         guard !hasSeen else { return }
@@ -69,6 +89,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let w = makeOnboardingWindow()
         w.makeKeyAndOrderFront(nil); w.center()
         onboardingWindow = w
+        updateDockPolicy()
 
         UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
     }
@@ -79,6 +100,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let w = makeOnboardingWindow()
         w.makeKeyAndOrderFront(nil); w.center()
         onboardingWindow = w
+        updateDockPolicy()
     }
 
     private func makeOnboardingWindow() -> NSWindow {
@@ -89,6 +111,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
+        w.delegate = self
         w.level = .normal
         w.backgroundColor = .clear
         w.isOpaque = false
@@ -214,7 +237,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func toggleEmojiBoard() {
-        if let w = emojiBoardWindow, w.isVisible { w.close(); emojiBoardWindow = nil; return }
+        if let w = emojiBoardWindow, w.isVisible { w.close(); emojiBoardWindow = nil; updateDockPolicy(); return }
         NSApplication.shared.activate(ignoringOtherApps: true)
         let v = EmojiBoardView { [weak self] e in self?.handleEmojiSelected(e) }
         let size = NSSize(width: 620, height: 520)
@@ -224,6 +247,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
+        w.delegate = self
         w.level = .normal
         w.backgroundColor = .clear
         w.isOpaque = false
@@ -240,6 +264,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         w.contentView = hostingView
         w.makeKeyAndOrderFront(nil); w.center()
         emojiBoardWindow = w
+        updateDockPolicy()
     }
 
     @objc func openSettings() {
@@ -252,6 +277,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
+        w.delegate = self
         w.level = .normal
         w.backgroundColor = .clear
         w.isOpaque = false
@@ -268,6 +294,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         w.contentView = hostingView
         w.makeKeyAndOrderFront(nil); w.center()
         settingsWindow = w
+        updateDockPolicy()
     }
 
     @objc func checkForUpdates() {
@@ -301,8 +328,14 @@ class AppState: ObservableObject {
     @Published var popupTheme: PopupTheme = AppSettings.shared.popupTheme {
         didSet { AppSettings.shared.popupTheme = popupTheme }
     }
-    @Published var preferredSkinTone: EmojiSkinTone = AppSettings.shared.preferredSkinTone {
-        didSet { AppSettings.shared.preferredSkinTone = preferredSkinTone }
+    @Published var personSkinTone: EmojiSkinTone = AppSettings.shared.personSkinTone {
+        didSet { AppSettings.shared.personSkinTone = personSkinTone }
+    }
+    @Published var manSkinTone: EmojiSkinTone = AppSettings.shared.manSkinTone {
+        didSet { AppSettings.shared.manSkinTone = manSkinTone }
+    }
+    @Published var womanSkinTone: EmojiSkinTone = AppSettings.shared.womanSkinTone {
+        didSet { AppSettings.shared.womanSkinTone = womanSkinTone }
     }
     @Published var ignoredSiteRules: [IgnoredSiteRule] = AppSettings.shared.ignoredSiteRules {
         didSet { AppSettings.shared.ignoredSiteRules = ignoredSiteRules }
@@ -324,7 +357,9 @@ class AppState: ObservableObject {
         inlinePanelOpenMode = AppSettings.shared.inlinePanelOpenMode
         inlineSuggestionLayout = AppSettings.shared.inlineSuggestionLayout
         popupTheme = AppSettings.shared.popupTheme
-        preferredSkinTone = AppSettings.shared.preferredSkinTone
+        personSkinTone = AppSettings.shared.personSkinTone
+        manSkinTone = AppSettings.shared.manSkinTone
+        womanSkinTone = AppSettings.shared.womanSkinTone
         ignoredSiteRules = AppSettings.shared.ignoredSiteRules
         ignoredAppRules = AppSettings.shared.ignoredAppRules
     }

@@ -46,6 +46,29 @@ struct EmojiSkinToneNormalizer {
         return result
     }
 
+    static func preferredEmojis(
+        from emojis: [Emoji],
+        personSkinTone: EmojiSkinTone,
+        manSkinTone: EmojiSkinTone,
+        womanSkinTone: EmojiSkinTone
+    ) -> [Emoji] {
+        let grouped = Dictionary(grouping: emojis) { baseKey(for: $0.character) }
+        var seen = Set<String>()
+        var result: [Emoji] = []
+
+        for emoji in emojis {
+            let key = baseKey(for: emoji.character)
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
+
+            let group = grouped[key] ?? [emoji]
+            let tone = skinToneFor(key: key, person: personSkinTone, man: manSkinTone, woman: womanSkinTone)
+            result.append(preferredEmoji(from: group, skinTone: tone) ?? emoji)
+        }
+
+        return result
+    }
+
     static func preferredReplacement(
         for emoji: Emoji,
         in allEmojis: [Emoji],
@@ -54,6 +77,19 @@ struct EmojiSkinToneNormalizer {
         let key = baseKey(for: emoji.character)
         let group = allEmojis.filter { baseKey(for: $0.character) == key }
         return preferredEmoji(from: group, skinTone: skinTone) ?? emoji
+    }
+
+    static func preferredReplacement(
+        for emoji: Emoji,
+        in allEmojis: [Emoji],
+        personSkinTone: EmojiSkinTone,
+        manSkinTone: EmojiSkinTone,
+        womanSkinTone: EmojiSkinTone
+    ) -> Emoji {
+        let key = baseKey(for: emoji.character)
+        let group = allEmojis.filter { baseKey(for: $0.character) == key }
+        let tone = skinToneFor(key: key, person: personSkinTone, man: manSkinTone, woman: womanSkinTone)
+        return preferredEmoji(from: group, skinTone: tone) ?? emoji
     }
 
     static func baseKey(for character: String) -> String {
@@ -66,6 +102,17 @@ struct EmojiSkinToneNormalizer {
     }
 
     private static var baseKeyCache: [String: String] = [:]
+
+    private static func skinToneFor(
+        key: String,
+        person: EmojiSkinTone,
+        man: EmojiSkinTone,
+        woman: EmojiSkinTone
+    ) -> EmojiSkinTone {
+        if key.hasPrefix("👨") { return man }
+        if key.hasPrefix("👩") { return woman }
+        return person
+    }
 
     private static func preferredEmoji(from group: [Emoji], skinTone: EmojiSkinTone) -> Emoji? {
         group.first { matches($0.character, skinTone: skinTone) }

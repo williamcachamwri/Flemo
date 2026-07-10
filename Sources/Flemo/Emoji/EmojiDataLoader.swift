@@ -27,6 +27,23 @@ class EmojiDataLoader {
         return normalized
     }
 
+    func preferredEmojis(
+        personSkinTone: EmojiSkinTone,
+        manSkinTone: EmojiSkinTone,
+        womanSkinTone: EmojiSkinTone
+    ) -> [Emoji] {
+        let cacheKey = "\(personSkinTone.rawValue)|\(manSkinTone.rawValue)|\(womanSkinTone.rawValue)"
+        if let cached = normalizedCache[cacheKey] { return cached }
+        let normalized = EmojiSkinToneNormalizer.preferredEmojis(
+            from: allEmojis,
+            personSkinTone: personSkinTone,
+            manSkinTone: manSkinTone,
+            womanSkinTone: womanSkinTone
+        )
+        normalizedCache[cacheKey] = normalized
+        return normalized
+    }
+
     private static func loadFromBundle() -> [Emoji]? {
         // Try Bundle.main (.app bundle)
         if let url = Bundle.main.url(forResource: "emoji-data", withExtension: "json") {

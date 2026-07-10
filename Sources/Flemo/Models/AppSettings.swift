@@ -40,9 +40,19 @@ class AppSettings {
         set { current.popupTheme = newValue; persist() }
     }
 
-    var preferredSkinTone: EmojiSkinTone {
-        get { current.preferredSkinTone }
-        set { current.preferredSkinTone = newValue; persist() }
+    var personSkinTone: EmojiSkinTone {
+        get { current.personSkinTone }
+        set { current.personSkinTone = newValue; persist() }
+    }
+
+    var manSkinTone: EmojiSkinTone {
+        get { current.manSkinTone }
+        set { current.manSkinTone = newValue; persist() }
+    }
+
+    var womanSkinTone: EmojiSkinTone {
+        get { current.womanSkinTone }
+        set { current.womanSkinTone = newValue; persist() }
     }
 
     var ignoredSiteRules: [IgnoredSiteRule] {
@@ -69,7 +79,9 @@ class AppSettings {
                 inlinePanelOpenMode: .recents,
                 inlineSuggestionLayout: .sleek,
                 popupTheme: .nativeDark,
-                preferredSkinTone: .standard
+                personSkinTone: .standard,
+                manSkinTone: .standard,
+                womanSkinTone: .standard,
             )
         }
     }
@@ -87,7 +99,9 @@ class AppSettings {
             inlinePanelOpenMode: .recents,
             inlineSuggestionLayout: .sleek,
             popupTheme: .nativeDark,
-            preferredSkinTone: .standard,
+            personSkinTone: .standard,
+            manSkinTone: .standard,
+            womanSkinTone: .standard,
             ignoredSiteRules: [],
             ignoredAppRules: []
         )

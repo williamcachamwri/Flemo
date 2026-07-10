@@ -66,7 +66,9 @@ struct AppSettingsData: Codable {
     var inlinePanelOpenMode: InlinePanelOpenMode
     var inlineSuggestionLayout: InlineSuggestionLayout
     var popupTheme: PopupTheme
-    var preferredSkinTone: EmojiSkinTone
+    var personSkinTone: EmojiSkinTone
+    var manSkinTone: EmojiSkinTone
+    var womanSkinTone: EmojiSkinTone
     var ignoredSiteRules: [IgnoredSiteRule]
     var ignoredAppRules: [IgnoredAppRule]
 
@@ -78,7 +80,9 @@ struct AppSettingsData: Codable {
         inlinePanelOpenMode: InlinePanelOpenMode = .recents,
         inlineSuggestionLayout: InlineSuggestionLayout = .sleek,
         popupTheme: PopupTheme = .nativeDark,
-        preferredSkinTone: EmojiSkinTone = .standard,
+        personSkinTone: EmojiSkinTone = .standard,
+        manSkinTone: EmojiSkinTone = .standard,
+        womanSkinTone: EmojiSkinTone = .standard,
         ignoredSiteRules: [IgnoredSiteRule] = [],
         ignoredAppRules: [IgnoredAppRule] = []
     ) {
@@ -89,7 +93,9 @@ struct AppSettingsData: Codable {
         self.inlinePanelOpenMode = inlinePanelOpenMode
         self.inlineSuggestionLayout = inlineSuggestionLayout
         self.popupTheme = popupTheme
-        self.preferredSkinTone = preferredSkinTone
+        self.personSkinTone = personSkinTone
+        self.manSkinTone = manSkinTone
+        self.womanSkinTone = womanSkinTone
         self.ignoredSiteRules = ignoredSiteRules
         self.ignoredAppRules = ignoredAppRules
     }
@@ -102,7 +108,9 @@ struct AppSettingsData: Codable {
         case inlinePanelOpenMode
         case inlineSuggestionLayout
         case popupTheme
-        case preferredSkinTone
+        case personSkinTone
+        case manSkinTone
+        case womanSkinTone
         case ignoredSiteRules
         case ignoredAppRules
     }
@@ -117,7 +125,9 @@ struct AppSettingsData: Codable {
         inlinePanelOpenMode = try container.decodeIfPresent(InlinePanelOpenMode.self, forKey: .inlinePanelOpenMode) ?? .recents
         inlineSuggestionLayout = try container.decodeIfPresent(InlineSuggestionLayout.self, forKey: .inlineSuggestionLayout) ?? .sleek
         popupTheme = try container.decodeIfPresent(PopupTheme.self, forKey: .popupTheme) ?? .nativeDark
-        preferredSkinTone = try container.decodeIfPresent(EmojiSkinTone.self, forKey: .preferredSkinTone) ?? .standard
+        personSkinTone = try container.decodeIfPresent(EmojiSkinTone.self, forKey: .personSkinTone) ?? .standard
+        manSkinTone = try container.decodeIfPresent(EmojiSkinTone.self, forKey: .manSkinTone) ?? .standard
+        womanSkinTone = try container.decodeIfPresent(EmojiSkinTone.self, forKey: .womanSkinTone) ?? .standard
         ignoredSiteRules = try container.decodeIfPresent([IgnoredSiteRule].self, forKey: .ignoredSiteRules) ?? []
         ignoredAppRules = try container.decodeIfPresent([IgnoredAppRule].self, forKey: .ignoredAppRules) ?? []
     }
@@ -131,7 +141,9 @@ struct AppSettingsData: Codable {
         try container.encode(inlinePanelOpenMode, forKey: .inlinePanelOpenMode)
         try container.encode(inlineSuggestionLayout, forKey: .inlineSuggestionLayout)
         try container.encode(popupTheme, forKey: .popupTheme)
-        try container.encode(preferredSkinTone, forKey: .preferredSkinTone)
+        try container.encode(personSkinTone, forKey: .personSkinTone)
+        try container.encode(manSkinTone, forKey: .manSkinTone)
+        try container.encode(womanSkinTone, forKey: .womanSkinTone)
         try container.encode(ignoredSiteRules, forKey: .ignoredSiteRules)
         try container.encode(ignoredAppRules, forKey: .ignoredAppRules)
     }

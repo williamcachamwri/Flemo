@@ -216,8 +216,12 @@ private struct EmojiSettingsPane: View {
             SettingsSectionTitle("Appearance")
 
             SettingsGroup {
-                SkinTonePreferencePicker(selection: $appState.preferredSkinTone)
-                    .padding(14)
+                SkinTonePreferencePicker(
+                    personTone: $appState.personSkinTone,
+                    manTone: $appState.manSkinTone,
+                    womanTone: $appState.womanSkinTone
+                )
+                .padding(14)
             }
 
             SettingsSectionTitle("Inline Suggestions")
@@ -475,15 +479,44 @@ private enum SkinTonePreviewCharacter: String, CaseIterable, Identifiable {
         case .woman: return "Woman"
         }
     }
+
+    @Namespace static var personNS
+    @Namespace static var manNS
+    @Namespace static var womanNS
+
+    var swatchNamespace: Namespace.ID {
+        switch self {
+        case .person: return SkinTonePreviewCharacter.personNS
+        case .man: return SkinTonePreviewCharacter.manNS
+        case .woman: return SkinTonePreviewCharacter.womanNS
+        }
+    }
 }
 
 private struct SkinTonePreferencePicker: View {
-    @Binding var selection: EmojiSkinTone
-    @Namespace private var swatchNamespace
+    @Binding var personTone: EmojiSkinTone
+    @Binding var manTone: EmojiSkinTone
+    @Binding var womanTone: EmojiSkinTone
     @State private var focusedCharacter: SkinTonePreviewCharacter = .person
 
+    private var focusedToneBinding: Binding<EmojiSkinTone> {
+        switch focusedCharacter {
+        case .person: return $personTone
+        case .man: return $manTone
+        case .woman: return $womanTone
+        }
+    }
+
     private var focusedEmoji: String {
-        selection.applied(to: focusedCharacter.baseEmoji)
+        focusedToneBinding.wrappedValue.applied(to: focusedCharacter.baseEmoji)
+    }
+
+    private func tone(for character: SkinTonePreviewCharacter) -> EmojiSkinTone {
+        switch character {
+        case .person: return personTone
+        case .man: return manTone
+        case .woman: return womanTone
+        }
     }
 
     var body: some View {
@@ -496,7 +529,7 @@ private struct SkinTonePreferencePicker: View {
                         .font(.system(size: 112))
                         .minimumScaleFactor(0.72)
                         .shadow(color: .black.opacity(0.26), radius: 16, y: 10)
-                        .id(selection.id + focusedCharacter.id)
+                        .id(focusedToneBinding.wrappedValue.id + focusedCharacter.id)
                         .transition(.softBlurSwap)
                 }
                 .frame(maxWidth: .infinity)
@@ -507,7 +540,7 @@ private struct SkinTonePreferencePicker: View {
                     ForEach(SkinTonePreviewCharacter.allCases) { character in
                         SkinToneCharacterButton(
                             character: character,
-                            skinTone: selection,
+                            skinTone: tone(for: character),
                             isSelected: focusedCharacter == character
                         ) {
                             withAnimation(.spring(response: 0.34, dampingFraction: 0.78, blendDuration: 0.10)) {
@@ -519,22 +552,28 @@ private struct SkinTonePreferencePicker: View {
                 .frame(width: 52)
             }
 
+            Text(focusedCharacter.title)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundColor(.secondary)
+
             HStack(spacing: 10) {
                 ForEach(EmojiSkinTone.allCases) { tone in
                     SkinToneSwatchButton(
                         tone: tone,
-                        isSelected: selection == tone,
-                        namespace: swatchNamespace
+                        isSelected: focusedToneBinding.wrappedValue == tone,
+                        namespace: focusedCharacter.swatchNamespace
                     ) {
                         withAnimation(.spring(response: 0.36, dampingFraction: 0.76, blendDuration: 0.10)) {
-                            selection = tone
+                            focusedToneBinding.wrappedValue = tone
                         }
                     }
                 }
             }
         }
-        .animation(.spring(response: 0.36, dampingFraction: 0.78, blendDuration: 0.10), value: selection)
-        .animation(.spring(response: 0.34, dampingFraction: 0.78, blendDuration: 0.10), value: focusedCharacter)
+        .animation(.spring(response: 0.36, dampingFraction: 0.78, blendDuration: 0.10), value: focusedCharacter)
+        .animation(.spring(response: 0.36, dampingFraction: 0.78, blendDuration: 0.10), value: personTone)
+        .animation(.spring(response: 0.36, dampingFraction: 0.78, blendDuration: 0.10), value: manTone)
+        .animation(.spring(response: 0.36, dampingFraction: 0.78, blendDuration: 0.10), value: womanTone)
     }
 }
 
