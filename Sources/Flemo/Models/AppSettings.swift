@@ -4,65 +4,66 @@ class AppSettings {
     static let shared = AppSettings()
 
     private let storage = StorageManager.shared
+    private let lock = NSLock()
 
     var triggerCharacter: String {
-        get { current.triggerCharacter }
-        set { current.triggerCharacter = newValue; persist() }
+        get { read(\.triggerCharacter) }
+        set { update { $0.triggerCharacter = newValue } }
     }
 
     var minTriggerLength: Int {
-        get { current.minTriggerLength }
-        set { current.minTriggerLength = newValue; persist() }
+        get { read(\.minTriggerLength) }
+        set { update { $0.minTriggerLength = newValue } }
     }
 
     var inlineTriggerEnabled: Bool {
-        get { current.inlineTriggerEnabled }
-        set { current.inlineTriggerEnabled = newValue; persist() }
+        get { read(\.inlineTriggerEnabled) }
+        set { update { $0.inlineTriggerEnabled = newValue } }
     }
 
     var emojiBoardShortcut: ShortcutKey {
-        get { current.emojiBoardShortcut }
-        set { current.emojiBoardShortcut = newValue; persist() }
+        get { read(\.emojiBoardShortcut) }
+        set { update { $0.emojiBoardShortcut = newValue } }
     }
 
     var inlinePanelOpenMode: InlinePanelOpenMode {
-        get { current.inlinePanelOpenMode }
-        set { current.inlinePanelOpenMode = newValue; persist() }
+        get { read(\.inlinePanelOpenMode) }
+        set { update { $0.inlinePanelOpenMode = newValue } }
     }
 
     var inlineSuggestionLayout: InlineSuggestionLayout {
-        get { current.inlineSuggestionLayout }
-        set { current.inlineSuggestionLayout = newValue; persist() }
+        get { read(\.inlineSuggestionLayout) }
+        set { update { $0.inlineSuggestionLayout = newValue } }
     }
 
     var popupTheme: PopupTheme {
-        get { current.popupTheme }
-        set { current.popupTheme = newValue; persist() }
+        get { read(\.popupTheme) }
+        set { update { $0.popupTheme = newValue } }
     }
 
     var personSkinTone: EmojiSkinTone {
-        get { current.personSkinTone }
-        set { current.personSkinTone = newValue; persist() }
+        get { read(\.personSkinTone) }
+        set { update { $0.personSkinTone = newValue } }
     }
 
     var manSkinTone: EmojiSkinTone {
-        get { current.manSkinTone }
-        set { current.manSkinTone = newValue; persist() }
+        get { read(\.manSkinTone) }
+        set { update { $0.manSkinTone = newValue } }
     }
 
     var womanSkinTone: EmojiSkinTone {
-        get { current.womanSkinTone }
-        set { current.womanSkinTone = newValue; persist() }
+        get { read(\.womanSkinTone) }
+        set { update { $0.womanSkinTone = newValue } }
     }
 
     var ignoredSiteRules: [IgnoredSiteRule] {
-        get { current.ignoredSiteRules }
-        set { current.ignoredSiteRules = newValue; persist() }
+        get { read(\.ignoredSiteRules) }
+        set { update { $0.ignoredSiteRules = newValue } }
     }
 
     var ignoredAppRules: [IgnoredAppRule] {
-        get { current.ignoredAppRules }
-        set { current.ignoredAppRules = newValue; persist() }
+        get { read(\.ignoredAppRules) }
+        set { update { $0.ignoredAppRules = newValue } }
     }
 
     private var current: AppSettingsData
@@ -86,12 +87,21 @@ class AppSettings {
         }
     }
 
-    private func persist() {
+    private func read<Value>(_ keyPath: KeyPath<AppSettingsData, Value>) -> Value {
+        lock.lock()
+        defer { lock.unlock() }
+        return current[keyPath: keyPath]
+    }
+
+    private func update(_ change: (inout AppSettingsData) -> Void) {
+        lock.lock()
+        change(&current)
         storage.saveSettings(current)
+        lock.unlock()
     }
 
     func resetToDefaults() {
-        current = AppSettingsData(
+        let defaults = AppSettingsData(
             triggerCharacter: "`",
             minTriggerLength: 2,
             inlineTriggerEnabled: true,
@@ -105,6 +115,10 @@ class AppSettings {
             ignoredSiteRules: [],
             ignoredAppRules: []
         )
-        persist()
+
+        lock.lock()
+        current = defaults
+        storage.saveSettings(current)
+        lock.unlock()
     }
 }

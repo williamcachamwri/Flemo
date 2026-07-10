@@ -16,6 +16,7 @@ class FrequencyTracker {
     static let shared = FrequencyTracker()
 
     private let storage = StorageManager.shared
+    private let lock = NSLock()
     private var cache: [String: Int] = [:]
 
     private init() {
@@ -27,28 +28,43 @@ class FrequencyTracker {
     }
 
     func recordUsage(emoji: Emoji) {
+        lock.lock()
         let current = cache[emoji.character, default: 0]
         cache[emoji.character] = current + 1
         storage.saveFrequencyData(cache)
+        lock.unlock()
     }
 
     func frequencyScore(for character: String) -> Int {
+        lock.lock()
+        defer { lock.unlock() }
         guard let count = cache[character] else { return 0 }
         return min(count * 3, 50)
     }
 
     func usageCount(for character: String) -> Int {
-        cache[character] ?? 0
+        lock.lock()
+        defer { lock.unlock() }
+        return cache[character] ?? 0
     }
 
     func topEmojiCharacters(limit: Int) -> [String] {
-        cache.sorted { $0.value > $1.value }.prefix(limit).map { $0.key }
+        lock.lock()
+        let snapshot = cache
+        lock.unlock()
+
+        return snapshot.sorted { $0.value > $1.value }.prefix(limit).map { $0.key }
     }
 
     func statsSnapshot(limit: Int = 8) -> FrequencyStatsSnapshot {
         let emojis = EmojiDataLoader.shared.allEmojis
-        let total = cache.values.reduce(0, +)
-        let top = cache
+
+        lock.lock()
+        let snapshot = cache
+        lock.unlock()
+
+        let total = snapshot.values.reduce(0, +)
+        let top = snapshot
             .sorted { lhs, rhs in
                 if lhs.value == rhs.value { return lhs.key < rhs.key }
                 return lhs.value > rhs.value
@@ -62,13 +78,15 @@ class FrequencyTracker {
 
         return FrequencyStatsSnapshot(
             totalUsage: total,
-            trackedEmojiCount: cache.count,
+            trackedEmojiCount: snapshot.count,
             topEmoji: top
         )
     }
 
     func resetAll() {
+        lock.lock()
         cache.removeAll()
         storage.saveFrequencyData(cache)
+        lock.unlock()
     }
 }

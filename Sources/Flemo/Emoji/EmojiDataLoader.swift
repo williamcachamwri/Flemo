@@ -10,6 +10,7 @@ struct Emoji: Codable {
 class EmojiDataLoader {
     static let shared = EmojiDataLoader()
     private(set) var allEmojis: [Emoji] = []
+    private let cacheLock = NSLock()
     private var normalizedCache: [String: [Emoji]] = [:]
 
     private init() {
@@ -21,9 +22,19 @@ class EmojiDataLoader {
     }
 
     func preferredEmojis(skinTone: EmojiSkinTone) -> [Emoji] {
-        if let cached = normalizedCache[skinTone.rawValue] { return cached }
+        cacheLock.lock()
+        if let cached = normalizedCache[skinTone.rawValue] {
+            cacheLock.unlock()
+            return cached
+        }
+        cacheLock.unlock()
+
         let normalized = EmojiSkinToneNormalizer.preferredEmojis(from: allEmojis, skinTone: skinTone)
+
+        cacheLock.lock()
         normalizedCache[skinTone.rawValue] = normalized
+        cacheLock.unlock()
+
         return normalized
     }
 
@@ -33,14 +44,24 @@ class EmojiDataLoader {
         womanSkinTone: EmojiSkinTone
     ) -> [Emoji] {
         let cacheKey = "\(personSkinTone.rawValue)|\(manSkinTone.rawValue)|\(womanSkinTone.rawValue)"
-        if let cached = normalizedCache[cacheKey] { return cached }
+        cacheLock.lock()
+        if let cached = normalizedCache[cacheKey] {
+            cacheLock.unlock()
+            return cached
+        }
+        cacheLock.unlock()
+
         let normalized = EmojiSkinToneNormalizer.preferredEmojis(
             from: allEmojis,
             personSkinTone: personSkinTone,
             manSkinTone: manSkinTone,
             womanSkinTone: womanSkinTone
         )
+
+        cacheLock.lock()
         normalizedCache[cacheKey] = normalized
+        cacheLock.unlock()
+
         return normalized
     }
 

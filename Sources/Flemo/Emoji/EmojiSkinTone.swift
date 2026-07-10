@@ -93,14 +93,25 @@ struct EmojiSkinToneNormalizer {
     }
 
     static func baseKey(for character: String) -> String {
-        if let cached = baseKeyCache[character] { return cached }
+        cacheLock.lock()
+        if let cached = baseKeyCache[character] {
+            cacheLock.unlock()
+            return cached
+        }
+        cacheLock.unlock()
+
         let key = modifiers.reduce(character) { partialResult, modifier in
             partialResult.replacingOccurrences(of: modifier, with: "")
         }
+
+        cacheLock.lock()
         baseKeyCache[character] = key
+        cacheLock.unlock()
+
         return key
     }
 
+    private static let cacheLock = NSLock()
     private static var baseKeyCache: [String: String] = [:]
 
     private static func skinToneFor(
