@@ -172,6 +172,11 @@ enum PopupTheme: String, Codable, CaseIterable, Identifiable {
     case nativeDark = "Native Dark"
     case glass = "Glass"
     case midnight = "Midnight"
+    case frost = "Frost"
+    case neon = "Neon"
+    case crimson = "Crimson"
+    case mono = "Mono"
+    case aurora = "Aurora"
 
     var id: String { rawValue }
 }

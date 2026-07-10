@@ -200,6 +200,96 @@ struct InlineSuggestionPillView: View {
                 selectionFill: Color(red: 0.36, green: 0.48, blue: 0.95).opacity(0.20),
                 shadow: Color.black.opacity(0.30)
             )
+        case .frost:
+            return PopupThemeStyle(
+                background: AnyShapeStyle(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.12, green: 0.14, blue: 0.18).opacity(0.88),
+                            Color(red: 0.18, green: 0.20, blue: 0.26).opacity(0.92)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                ),
+                border: Color(red: 0.70, green: 0.75, blue: 0.85).opacity(0.20),
+                divider: Color(red: 0.70, green: 0.75, blue: 0.85).opacity(0.10),
+                secondaryText: Color(red: 0.75, green: 0.78, blue: 0.88).opacity(0.80),
+                selectionFill: Color(red: 0.55, green: 0.60, blue: 0.75).opacity(0.20),
+                shadow: Color(red: 0.10, green: 0.12, blue: 0.18).opacity(0.35)
+            )
+        case .neon:
+            return PopupThemeStyle(
+                background: AnyShapeStyle(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.02, green: 0.02, blue: 0.06).opacity(0.96),
+                            Color(red: 0.06, green: 0.03, blue: 0.14).opacity(0.94)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                ),
+                border: Color(red: 0.30, green: 0.60, blue: 1.0).opacity(0.35),
+                divider: Color(red: 0.80, green: 0.20, blue: 1.0).opacity(0.20),
+                secondaryText: Color(red: 0.40, green: 0.70, blue: 1.0).opacity(0.80),
+                selectionFill: Color(red: 0.30, green: 0.60, blue: 1.0).opacity(0.18),
+                shadow: Color(red: 0.15, green: 0.05, blue: 0.30).opacity(0.35)
+            )
+        case .crimson:
+            return PopupThemeStyle(
+                background: AnyShapeStyle(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.10, green: 0.03, blue: 0.05).opacity(0.94),
+                            Color(red: 0.18, green: 0.05, blue: 0.08).opacity(0.92)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                ),
+                border: Color(red: 0.75, green: 0.30, blue: 0.35).opacity(0.30),
+                divider: Color(red: 0.65, green: 0.25, blue: 0.30).opacity(0.15),
+                secondaryText: Color(red: 0.85, green: 0.55, blue: 0.55).opacity(0.72),
+                selectionFill: Color(red: 0.70, green: 0.25, blue: 0.30).opacity(0.22),
+                shadow: Color(red: 0.08, green: 0.02, blue: 0.03).opacity(0.40)
+            )
+        case .mono:
+            return PopupThemeStyle(
+                background: AnyShapeStyle(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.08, green: 0.08, blue: 0.09).opacity(0.94),
+                            Color(red: 0.12, green: 0.12, blue: 0.13).opacity(0.92)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                ),
+                border: Color(red: 0.50, green: 0.50, blue: 0.52).opacity(0.22),
+                divider: Color(red: 0.50, green: 0.50, blue: 0.52).opacity(0.10),
+                secondaryText: Color(red: 0.55, green: 0.55, blue: 0.58).opacity(0.75),
+                selectionFill: Color(red: 0.55, green: 0.55, blue: 0.58).opacity(0.18),
+                shadow: Color(red: 0.02, green: 0.02, blue: 0.03).opacity(0.35)
+            )
+        case .aurora:
+            return PopupThemeStyle(
+                background: AnyShapeStyle(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.02, green: 0.06, blue: 0.10).opacity(0.94),
+                            Color(red: 0.06, green: 0.12, blue: 0.08).opacity(0.92)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                ),
+                border: Color(red: 0.20, green: 0.80, blue: 0.60).opacity(0.25),
+                divider: Color(red: 0.50, green: 0.30, blue: 0.90).opacity(0.15),
+                secondaryText: Color(red: 0.50, green: 0.85, blue: 0.75).opacity(0.75),
+                selectionFill: Color(red: 0.20, green: 0.80, blue: 0.60).opacity(0.18),
+                shadow: Color(red: 0.02, green: 0.06, blue: 0.08).opacity(0.35)
+            )
         }
     }
 }
