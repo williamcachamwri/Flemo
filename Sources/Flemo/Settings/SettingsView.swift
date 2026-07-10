@@ -1293,70 +1293,7 @@ private struct EmojiUsageRow: View {
     }
 
     private func emojiColors(for emoji: Emoji) -> [Color] {
-        let haystack = ([emoji.name, emoji.category] + emoji.keywords)
-            .joined(separator: " ")
-            .lowercased()
-
-        if haystack.contains("dog") || haystack.contains("cat") || haystack.contains("animal") {
-            return [
-                Color(red: 0.42, green: 0.25, blue: 0.12),
-                Color(red: 0.29, green: 0.18, blue: 0.10)
-            ]
-        }
-
-        if haystack.contains("heart") || haystack.contains("love") {
-            return [
-                Color(red: 0.55, green: 0.12, blue: 0.30),
-                Color(red: 0.32, green: 0.10, blue: 0.28)
-            ]
-        }
-
-        if haystack.contains("fire") || haystack.contains("hot") {
-            return [
-                Color(red: 0.66, green: 0.22, blue: 0.09),
-                Color(red: 0.42, green: 0.12, blue: 0.08)
-            ]
-        }
-
-        if haystack.contains("face") || haystack.contains("smile") || haystack.contains("joy") {
-            return [
-                Color(red: 0.68, green: 0.43, blue: 0.09),
-                Color(red: 0.42, green: 0.25, blue: 0.08)
-            ]
-        }
-
-        if haystack.contains("plant") || haystack.contains("tree") || haystack.contains("leaf") {
-            return [
-                Color(red: 0.12, green: 0.43, blue: 0.24),
-                Color(red: 0.08, green: 0.26, blue: 0.18)
-            ]
-        }
-
-        if haystack.contains("water") || haystack.contains("blue") || haystack.contains("sky") {
-            return [
-                Color(red: 0.10, green: 0.36, blue: 0.60),
-                Color(red: 0.06, green: 0.20, blue: 0.38)
-            ]
-        }
-
-        if haystack.contains("food") || haystack.contains("drink") {
-            return [
-                Color(red: 0.55, green: 0.28, blue: 0.10),
-                Color(red: 0.32, green: 0.16, blue: 0.08)
-            ]
-        }
-
-        if haystack.contains("symbol") || haystack.contains("star") || haystack.contains("spark") {
-            return [
-                Color(red: 0.34, green: 0.16, blue: 0.56),
-                Color(red: 0.16, green: 0.16, blue: 0.42)
-            ]
-        }
-
-        return [
-            Color(red: 0.30, green: 0.30, blue: 0.36),
-            Color(red: 0.18, green: 0.18, blue: 0.23)
-        ]
+        EmojiColorExtractor.shared.colors(for: emoji.character)
     }
 }
 
