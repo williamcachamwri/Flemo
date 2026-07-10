@@ -57695,7 +57695,8 @@
       "flag",
       "flags",
       "islands",
-      "land"
+      "land",
+      "ax"
     ]
   },
   {
@@ -58748,7 +58749,8 @@
       "flags",
       "hong",
       "kong",
-      "sar"
+      "sar",
+      "hk"
     ]
   },
   {
@@ -59390,7 +59392,8 @@
       "country",
       "flag",
       "flags",
-      "myanmar"
+      "myanmar",
+      "mm"
     ]
   },
   {
@@ -59415,7 +59418,8 @@
       "flag",
       "flags",
       "macao",
-      "sar"
+      "sar",
+      "mo"
     ]
   },
   {
@@ -59908,7 +59912,8 @@
       "flag",
       "flags",
       "r",
-      "union"
+      "union",
+      "re"
     ]
   },
   {
@@ -60384,7 +60389,8 @@
       "flag",
       "flags",
       "rkiye",
-      "t"
+      "t",
+      "tr"
     ]
   },
   {
