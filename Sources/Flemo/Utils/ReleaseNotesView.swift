@@ -101,8 +101,11 @@ struct ReleaseNotesView: View {
             }
 
             if !release.body.isEmpty {
-                MarkdownView(markdown: release.body)
-                    .frame(maxWidth: .infinity, minHeight: 20)
+                Text(release.body)
+                    .font(.system(size: 11, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.85))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
             }
 
             if release.tagName == updater.latestRelease?.tagName,
@@ -166,64 +169,11 @@ struct ReleaseNotesView: View {
         .padding(16)
     }
 
-    private func markdownString(_ text: String) -> AttributedString {
-        guard let parsed = try? AttributedString(
-            markdown: text,
-            options: .init(
-                allowsExtendedAttributes: true,
-                interpretedSyntax: .inlineOnlyPreservingWhitespace
-            )
-        ) else {
-            return AttributedString(text)
-        }
-        return parsed
-    }
-
     private var currentVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
     }
 }
 
-private struct MarkdownView: NSViewRepresentable {
-    let markdown: String
-
-    func makeNSView(context: Context) -> NSTextView {
-        let tv = NSTextView()
-        tv.isEditable = false
-        tv.isSelectable = true
-        tv.drawsBackground = false
-        tv.textContainer?.lineFragmentPadding = 0
-        tv.textContainer?.containerSize = NSSize(width: 428, height: CGFloat.greatestFiniteMagnitude)
-        tv.isVerticallyResizable = true
-        tv.autoresizingMask = [.width]
-        tv.textContainer?.widthTracksTextView = true
-        return tv
-    }
-
-    func updateNSView(_ tv: NSTextView, context: Context) {
-        do {
-            let attr = try AttributedString(
-                markdown: markdown,
-                options: .init(allowsExtendedAttributes: true)
-            )
-            let ns = NSAttributedString(attr)
-            let full = NSRange(location: 0, length: ns.length)
-            let mutable = NSMutableAttributedString(attributedString: ns)
-
-            let para = NSMutableParagraphStyle()
-            para.lineSpacing = 3
-            para.paragraphSpacing = 6
-            mutable.addAttribute(.paragraphStyle, value: para, range: full)
-
-            tv.textStorage?.setAttributedString(mutable)
-        } catch {
-            tv.textStorage?.setAttributedString(NSAttributedString(
-                string: markdown,
-                attributes: [.font: NSFont.systemFont(ofSize: 11)]
-            ))
-        }
-    }
-}
 
 private struct VisualEffectBackground: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {
