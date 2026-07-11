@@ -21,7 +21,8 @@ struct QuickEmojiBoardView: View {
         EmojiDataLoader.shared.preferredEmojis(
             personSkinTone: appState.personSkinTone,
             manSkinTone: appState.manSkinTone,
-            womanSkinTone: appState.womanSkinTone
+            womanSkinTone: appState.womanSkinTone,
+            gestureSkinTone: appState.gestureSkinTone
         )
     }
 
@@ -69,17 +70,7 @@ struct QuickEmojiBoardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.22),
-                            Color.white.opacity(0.06)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
+                .stroke(Color.white.opacity(0.11), lineWidth: 1)
         )
         .background(
             QuickEmojiBoardKeyMonitor { event in
@@ -101,6 +92,9 @@ struct QuickEmojiBoardView: View {
             refreshResults(debounce: false)
         }
         .onChange(of: appState.personSkinTone) { _, _ in
+            refreshResults(debounce: false)
+        }
+        .onChange(of: appState.gestureSkinTone) { _, _ in
             refreshResults(debounce: false)
         }
         .onChange(of: appState.manSkinTone) { _, _ in
@@ -158,7 +152,7 @@ struct QuickEmojiBoardView: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(Color.accentColor.opacity(searchFocused ? 0.74 : 0.28), lineWidth: 1.5)
         )
-        .shadow(color: Color.accentColor.opacity(searchFocused ? 0.18 : 0), radius: 10, y: 4)
+        .shadow(color: Color.black.opacity(searchFocused ? 0.14 : 0), radius: 8, y: 4)
         .padding(.horizontal, 2)
         .padding(.top, 2)
         .padding(.bottom, 8)
@@ -333,6 +327,7 @@ struct QuickEmojiBoardView: View {
         let keyword = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let category = selectedCategory
         let personTone = appState.personSkinTone
+        let gestureTone = appState.gestureSkinTone
         let manTone = appState.manSkinTone
         let womanTone = appState.womanSkinTone
 
@@ -341,6 +336,7 @@ struct QuickEmojiBoardView: View {
                 keyword: keyword,
                 category: category,
                 personTone: personTone,
+                gestureTone: gestureTone,
                 manTone: manTone,
                 womanTone: womanTone
             )
@@ -359,22 +355,39 @@ struct QuickEmojiBoardView: View {
         keyword: String,
         category: QuickEmojiCategory,
         personTone: EmojiSkinTone,
+        gestureTone: EmojiSkinTone,
         manTone: EmojiSkinTone,
         womanTone: EmojiSkinTone
     ) -> [Emoji] {
         let source = EmojiDataLoader.shared.preferredEmojis(
             personSkinTone: personTone,
             manSkinTone: manTone,
-            womanSkinTone: womanTone
+            womanSkinTone: womanTone,
+            gestureSkinTone: gestureTone
         )
 
         if !keyword.isEmpty {
-            return Array(dedupe(EmojiSearchEngine.shared.search(keyword: keyword, maxResults: 72)).prefix(72))
+            let results = EmojiSearchEngine.shared.search(
+                keyword: keyword,
+                maxResults: 72,
+                personSkinTone: personTone,
+                manSkinTone: manTone,
+                womanSkinTone: womanTone,
+                gestureSkinTone: gestureTone
+            )
+            return Array(dedupe(results).prefix(72))
         }
 
         switch category {
         case .recents:
-            let frequent = EmojiSearchEngine.shared.search(keyword: "", maxResults: 18)
+            let frequent = EmojiSearchEngine.shared.search(
+                keyword: "",
+                maxResults: 18,
+                personSkinTone: personTone,
+                manSkinTone: manTone,
+                womanSkinTone: womanTone,
+                gestureSkinTone: gestureTone
+            )
             return Array(dedupe(curatedDefaults(from: source) + frequent).prefix(72))
         case .favorites:
             return Array(source.filter { EmojiCustomizationManager.shared.isFavorite($0.character) }.prefix(72))
@@ -385,11 +398,11 @@ struct QuickEmojiBoardView: View {
     }
 
     private static func curatedDefaults(from source: [Emoji]) -> [Emoji] {
-        var byCharacter: [String: Emoji] = [:]
+        var byBaseKey: [String: Emoji] = [:]
         for emoji in source {
-            byCharacter[emoji.character] = emoji
+            byBaseKey[EmojiSkinToneNormalizer.baseKey(for: emoji.character)] = emoji
         }
-        return curatedQuickCharacters.compactMap { byCharacter[$0] }
+        return curatedQuickCharacters.compactMap { byBaseKey[EmojiSkinToneNormalizer.baseKey(for: $0)] }
     }
 
     private static func dedupe(_ emojis: [Emoji]) -> [Emoji] {
@@ -564,7 +577,7 @@ private struct QuickEmojiSelectionPreview: View {
             RoundedRectangle(cornerRadius: 15, style: .continuous)
                 .stroke(Color.white.opacity(0.10), lineWidth: 1)
         )
-        .shadow(color: colors[0].opacity(0.12), radius: 12, y: 6)
+        .shadow(color: .black.opacity(0.10), radius: 10, y: 5)
         .animation(.spring(response: 0.24, dampingFraction: 0.88), value: emoji.character)
     }
 
@@ -636,7 +649,7 @@ private struct QuickEmojiCell: View {
                             .stroke(isSelected ? Color.white.opacity(0.18) : Color.clear, lineWidth: 1)
                     )
                     .scaleEffect(isSelected ? 1.09 : 1)
-                    .shadow(color: isSelected ? colors[0].opacity(0.20) : .clear, radius: 9, y: 4)
+                    .shadow(color: isSelected ? .black.opacity(0.16) : .clear, radius: 8, y: 4)
 
                 if isFavorite {
                     Circle()

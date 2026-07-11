@@ -2,6 +2,14 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
+private enum SettingsSurfaceStyle {
+    static let panelFill = Color.black.opacity(0.055)
+    static let tileFill = Color.black.opacity(0.050)
+    static let iconFill = Color.secondary.opacity(0.085)
+    static let border = Color.white.opacity(0.105)
+    static let divider = Color.white.opacity(0.055)
+}
+
 struct SettingsView: View {
     @State private var selectedTab = 0
 
@@ -24,24 +32,14 @@ struct SettingsView: View {
             VisualEffectMaterialView()
                 .overlay(
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(
-                            LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color.white.opacity(0.22),
-                                    Color.white.opacity(0.06)
-                                ]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
+                        .stroke(Color.white.opacity(0.10), lineWidth: 1)
                 )
 
             HStack(spacing: 0) {
                 sidebar
 
                 Divider()
-                    .background(Color.white.opacity(0.06))
+                    .background(SettingsSurfaceStyle.divider)
 
                 content
             }
@@ -62,7 +60,7 @@ struct SettingsView: View {
             .padding(.bottom, 14)
 
             Divider()
-                .background(Color.white.opacity(0.06))
+                .background(SettingsSurfaceStyle.divider)
                 .padding(.bottom, 8)
 
             VStack(spacing: 2) {
@@ -116,7 +114,7 @@ struct SettingsView: View {
             .padding(.bottom, 12)
 
             Divider()
-                .background(Color.white.opacity(0.06))
+                .background(SettingsSurfaceStyle.divider)
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
@@ -234,16 +232,7 @@ private struct SettingsStatusPanel: View {
         HStack(spacing: 13) {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                statusColor.opacity(0.24),
-                                Color.cyan.opacity(0.10)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(statusColor.opacity(0.12))
 
                 Image(systemName: icon)
                     .font(.system(size: 19, weight: .bold))
@@ -252,7 +241,7 @@ private struct SettingsStatusPanel: View {
             .frame(width: 46, height: 46)
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.white.opacity(0.13), lineWidth: 1)
+                    .stroke(statusColor.opacity(0.18), lineWidth: 1)
             )
 
             VStack(alignment: .leading, spacing: 3) {
@@ -273,11 +262,11 @@ private struct SettingsStatusPanel: View {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.black.opacity(0.08))
+                .fill(SettingsSurfaceStyle.panelFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                .stroke(SettingsSurfaceStyle.border, lineWidth: 1)
         )
     }
 }
@@ -298,7 +287,7 @@ private struct PermissionStatusTile: View {
                     .frame(width: 30, height: 30)
                     .background(
                         RoundedRectangle(cornerRadius: 9, style: .continuous)
-                            .fill(Color.secondary.opacity(0.10))
+                            .fill(SettingsSurfaceStyle.iconFill)
                     )
 
                 Spacer()
@@ -345,11 +334,11 @@ private struct PermissionStatusTile: View {
         .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.black.opacity(0.075))
+                .fill(SettingsSurfaceStyle.tileFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.white.opacity(granted ? 0.12 : 0.18), lineWidth: 1)
+                .stroke(granted ? SettingsSurfaceStyle.border : Color.orange.opacity(0.22), lineWidth: 1)
         )
     }
 }
@@ -402,11 +391,11 @@ private struct SettingsPanel<Content: View>: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.black.opacity(0.08))
+                .fill(SettingsSurfaceStyle.panelFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                .stroke(SettingsSurfaceStyle.border, lineWidth: 1)
         )
     }
 }
@@ -480,14 +469,12 @@ private struct EmojiSettingsPane: View {
 
             SettingsSectionTitle("Appearance")
 
-            SettingsGroup {
-                SkinTonePreferencePicker(
-                    personTone: $appState.personSkinTone,
-                    manTone: $appState.manSkinTone,
-                    womanTone: $appState.womanSkinTone
-                )
-                .padding(14)
-            }
+            SkinTonePreferencePicker(
+                personTone: $appState.personSkinTone,
+                gestureTone: $appState.gestureSkinTone,
+                manTone: $appState.manSkinTone,
+                womanTone: $appState.womanSkinTone
+            )
 
             SettingsSectionTitle("Inline Suggestions")
 
@@ -658,7 +645,14 @@ private struct InlineSuggestionSettingsPreview: View {
     private let previewKeyword = "cat"
 
     private var previewEmojis: [Emoji] {
-        EmojiSearchEngine.shared.search(keyword: previewKeyword, maxResults: AppState.inlineVisibleCount)
+        EmojiSearchEngine.shared.search(
+            keyword: previewKeyword,
+            maxResults: AppState.inlineVisibleCount,
+            personSkinTone: appState.personSkinTone,
+            manSkinTone: appState.manSkinTone,
+            womanSkinTone: appState.womanSkinTone,
+            gestureSkinTone: appState.gestureSkinTone
+        )
     }
 
     private var previewEntries: [InlineSuggestionEntry] {
@@ -677,6 +671,7 @@ private struct InlineSuggestionSettingsPreview: View {
             InlineSuggestionPillView(
                 entries: previewEntries,
                 selectedIndex: 0,
+                navigationActive: true,
                 layout: appState.inlineSuggestionLayout,
                 label: appState.triggerCharacter + previewKeyword,
                 theme: appState.popupTheme,
@@ -724,6 +719,7 @@ private struct InlineSuggestionSettingsPreview: View {
 
 private enum SkinTonePreviewCharacter: String, CaseIterable, Identifiable {
     case person
+    case gesture
     case man
     case woman
 
@@ -732,6 +728,7 @@ private enum SkinTonePreviewCharacter: String, CaseIterable, Identifiable {
     var baseEmoji: String {
         switch self {
         case .person: return "🧑"
+        case .gesture: return "👋"
         case .man: return "👨"
         case .woman: return "👩"
         }
@@ -740,203 +737,207 @@ private enum SkinTonePreviewCharacter: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .person: return "Person"
+        case .gesture: return "Gesture & Body"
         case .man: return "Man"
         case .woman: return "Woman"
-        }
-    }
-
-    @Namespace static var personNS
-    @Namespace static var manNS
-    @Namespace static var womanNS
-
-    var swatchNamespace: Namespace.ID {
-        switch self {
-        case .person: return SkinTonePreviewCharacter.personNS
-        case .man: return SkinTonePreviewCharacter.manNS
-        case .woman: return SkinTonePreviewCharacter.womanNS
         }
     }
 }
 
 private struct SkinTonePreferencePicker: View {
     @Binding var personTone: EmojiSkinTone
+    @Binding var gestureTone: EmojiSkinTone
     @Binding var manTone: EmojiSkinTone
     @Binding var womanTone: EmojiSkinTone
     @State private var focusedCharacter: SkinTonePreviewCharacter = .person
+    @Namespace private var swatchNamespace
 
     private var focusedToneBinding: Binding<EmojiSkinTone> {
         switch focusedCharacter {
         case .person: return $personTone
+        case .gesture: return $gestureTone
         case .man: return $manTone
         case .woman: return $womanTone
         }
     }
 
+    private var focusedTone: EmojiSkinTone {
+        focusedToneBinding.wrappedValue
+    }
+
     private var focusedEmoji: String {
-        focusedToneBinding.wrappedValue.applied(to: focusedCharacter.baseEmoji)
+        focusedTone.applied(to: focusedCharacter.baseEmoji)
     }
 
     private func tone(for character: SkinTonePreviewCharacter) -> EmojiSkinTone {
         switch character {
         case .person: return personTone
+        case .gesture: return gestureTone
         case .man: return manTone
         case .woman: return womanTone
         }
     }
 
     var body: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 14) {
-                ZStack {
-                    SkinTonePreviewGrid()
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            let height = proxy.size.height
+            let previewX = width * 0.48
+            let previewY = height * 0.38
 
-                    Text(focusedEmoji)
-                        .font(.system(size: 112))
-                        .minimumScaleFactor(0.72)
-                        .shadow(color: .black.opacity(0.26), radius: 16, y: 10)
-                        .id(focusedToneBinding.wrappedValue.id + focusedCharacter.id)
-                        .transition(.softBlurSwap)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 154)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            ZStack {
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(Color.black.opacity(0.04))
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(Color.white.opacity(0.19), lineWidth: 1.4)
 
-                VStack(spacing: 9) {
-                    ForEach(SkinTonePreviewCharacter.allCases) { character in
-                        SkinToneCharacterButton(
-                            character: character,
-                            skinTone: tone(for: character),
-                            isSelected: focusedCharacter == character
-                        ) {
-                            withAnimation(.spring(response: 0.34, dampingFraction: 0.78, blendDuration: 0.10)) {
-                                focusedCharacter = character
-                            }
-                        }
-                    }
-                }
-                .frame(width: 52)
-            }
+                AppearancePreviewGrid()
+                    .frame(width: min(width * 0.44, 318), height: height * 0.67)
+                    .position(x: previewX, y: previewY)
+                    .opacity(0.88)
 
-            Text(focusedCharacter.title)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundColor(.secondary)
+                Circle()
+                    .fill(focusedTone.glowColor.opacity(0.20))
+                    .frame(width: 132, height: 132)
+                    .blur(radius: 30)
+                    .position(x: previewX, y: previewY + 5)
+                    .id("glow-\(focusedCharacter.id)-\(focusedTone.id)")
+                    .transition(.appearanceBlurSwap)
 
-            HStack(spacing: 10) {
-                ForEach(EmojiSkinTone.allCases) { tone in
-                    SkinToneSwatchButton(
-                        tone: tone,
-                        isSelected: focusedToneBinding.wrappedValue == tone,
-                        namespace: focusedCharacter.swatchNamespace
-                    ) {
-                        withAnimation(.spring(response: 0.36, dampingFraction: 0.76, blendDuration: 0.10)) {
-                            focusedToneBinding.wrappedValue = tone
-                        }
-                    }
-                }
+                Text(focusedEmoji)
+                    .font(.system(size: 126))
+                    .minimumScaleFactor(0.62)
+                    .shadow(color: .black.opacity(0.32), radius: 18, y: 10)
+                    .frame(width: min(width * 0.34, 210), height: 168)
+                    .position(x: previewX, y: previewY + 2)
+                    .id("emoji-\(focusedCharacter.id)-\(focusedTone.id)")
+                    .transition(.appearanceBlurSwap)
+
+                AppearanceCharacterRail(
+                    focusedCharacter: $focusedCharacter,
+                    toneProvider: tone(for:)
+                )
+                .frame(width: 62, height: 166)
+                .position(x: width * 0.83, y: previewY + 4)
+
+                AppearanceSkinToneSwatches(
+                    selectedTone: focusedToneBinding,
+                    namespace: swatchNamespace
+                )
+                .frame(width: min(width * 0.58, 480))
+                .position(x: width * 0.50, y: height - 50)
             }
         }
-        .animation(.spring(response: 0.36, dampingFraction: 0.78, blendDuration: 0.10), value: focusedCharacter)
-        .animation(.spring(response: 0.36, dampingFraction: 0.78, blendDuration: 0.10), value: personTone)
-        .animation(.spring(response: 0.36, dampingFraction: 0.78, blendDuration: 0.10), value: manTone)
-        .animation(.spring(response: 0.36, dampingFraction: 0.78, blendDuration: 0.10), value: womanTone)
+        .frame(maxWidth: .infinity)
+        .frame(height: 258)
+        .animation(.spring(response: 0.48, dampingFraction: 0.78, blendDuration: 0.10), value: focusedCharacter)
+        .animation(.spring(response: 0.42, dampingFraction: 0.76, blendDuration: 0.08), value: personTone)
+        .animation(.spring(response: 0.42, dampingFraction: 0.76, blendDuration: 0.08), value: gestureTone)
+        .animation(.spring(response: 0.42, dampingFraction: 0.76, blendDuration: 0.08), value: manTone)
+        .animation(.spring(response: 0.42, dampingFraction: 0.76, blendDuration: 0.08), value: womanTone)
     }
 }
 
-private struct SkinToneCharacterButton: View {
-    let character: SkinTonePreviewCharacter
-    let skinTone: EmojiSkinTone
-    let isSelected: Bool
-    let action: () -> Void
+private struct AppearanceCharacterRail: View {
+    @Binding var focusedCharacter: SkinTonePreviewCharacter
+    let toneProvider: (SkinTonePreviewCharacter) -> EmojiSkinTone
 
     var body: some View {
-        Button(action: action) {
-            Text(skinTone.applied(to: character.baseEmoji))
-                .font(.system(size: isSelected ? 31 : 24))
-                .frame(width: 42, height: 42)
-                .background(
-                    Circle()
-                        .fill(Color.white.opacity(isSelected ? 0.12 : 0.04))
-                )
-                .overlay(
-                    Circle()
-                        .stroke(Color.white.opacity(isSelected ? 0.28 : 0.06), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(isSelected ? 0.22 : 0.0), radius: 8, y: 4)
-                .id(skinTone.id + character.id)
-                .transition(.softBlurSwap)
+        VStack(spacing: 5) {
+            ForEach(SkinTonePreviewCharacter.allCases) { character in
+                railButton(character)
+            }
+        }
+    }
+
+    private func railButton(_ character: SkinTonePreviewCharacter) -> some View {
+        let selected = focusedCharacter == character
+        return Button {
+            withAnimation(.spring(response: 0.48, dampingFraction: 0.74, blendDuration: 0.10)) {
+                focusedCharacter = character
+            }
+        } label: {
+            Text(toneProvider(character).applied(to: character.baseEmoji))
+                .font(.system(size: selected ? 29 : 25))
+                .frame(width: 46, height: 31)
+                .opacity(selected ? 1 : 0.76)
+                .saturation(selected ? 1 : 0.78)
+                .scaleEffect(selected ? 1.08 : 1.0)
+                .blur(radius: selected ? 0 : 0.18)
+                .id(character.id + toneProvider(character).id)
+                .transition(.appearanceBlurSwap)
         }
         .buttonStyle(.plain)
         .help(character.title)
+        .accessibilityLabel(character.title)
     }
 }
 
-private struct SkinToneSwatchButton: View {
-    let tone: EmojiSkinTone
-    let isSelected: Bool
+private struct AppearanceSkinToneSwatches: View {
+    @Binding var selectedTone: EmojiSkinTone
     let namespace: Namespace.ID
-    let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(tone.swatchFill)
-                .frame(width: 42, height: 26)
-                .overlay {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(Color.white.opacity(0.92), lineWidth: 2)
-                            .matchedGeometryEffect(id: "selectedSkinTone", in: namespace)
+        HStack(spacing: 12) {
+            ForEach(EmojiSkinTone.allCases) { tone in
+                Button {
+                    withAnimation(.spring(response: 0.38, dampingFraction: 0.74, blendDuration: 0.08)) {
+                        selectedTone = tone
                     }
+                } label: {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(tone.swatchColor)
+                        .frame(height: 46)
+                        .overlay {
+                            if selectedTone == tone {
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .stroke(Color.white.opacity(0.94), lineWidth: 3)
+                                    .matchedGeometryEffect(id: "appearanceSelectedTone", in: namespace)
+                            }
+                        }
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(Color.black.opacity(0.22), lineWidth: 1)
+                        )
+                        .shadow(color: .black.opacity(selectedTone == tone ? 0.28 : 0.12), radius: selectedTone == tone ? 12 : 5, y: selectedTone == tone ? 7 : 3)
+                        .scaleEffect(selectedTone == tone ? 1.04 : 1)
+                        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.black.opacity(0.18), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(isSelected ? 0.30 : 0.08), radius: isSelected ? 12 : 4, y: isSelected ? 7 : 2)
-                .scaleEffect(isSelected ? 1.08 : 1.0)
-                .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .buttonStyle(.plain)
+                .help(tone.rawValue)
+                .accessibilityLabel(tone.rawValue)
+            }
         }
-        .buttonStyle(.plain)
-        .help(tone.rawValue)
     }
 }
 
-private struct SkinTonePreviewGrid: View {
+private struct AppearancePreviewGrid: View {
     var body: some View {
         GeometryReader { proxy in
             let size = proxy.size
 
             ZStack {
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(0.035),
-                        Color.black.opacity(0.08)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-
                 Path { path in
-                    for fraction in [0.25, 0.5, 0.75] {
+                    for fraction in [0.20, 0.50, 0.80] {
                         let x = size.width * fraction
-                        path.move(to: CGPoint(x: x, y: 8))
-                        path.addLine(to: CGPoint(x: x, y: size.height - 8))
+                        path.move(to: CGPoint(x: x, y: 2))
+                        path.addLine(to: CGPoint(x: x, y: size.height - 2))
                     }
 
-                    for fraction in [0.30, 0.70] {
+                    for fraction in [0.14, 0.50, 0.82] {
                         let y = size.height * fraction
-                        path.move(to: CGPoint(x: 14, y: y))
-                        path.addLine(to: CGPoint(x: size.width - 14, y: y))
+                        path.move(to: CGPoint(x: 2, y: y))
+                        path.addLine(to: CGPoint(x: size.width - 2, y: y))
                     }
                 }
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(Color.white.opacity(0.095), lineWidth: 1.25)
 
                 Path { path in
-                    let y = size.height * 0.56
-                    path.move(to: CGPoint(x: 24, y: y))
-                    path.addLine(to: CGPoint(x: size.width - 24, y: y))
+                    let y = size.height * 0.50
+                    path.move(to: CGPoint(x: 0, y: y))
+                    path.addLine(to: CGPoint(x: size.width, y: y))
                 }
-                .stroke(Color.white.opacity(0.12), style: StrokeStyle(lineWidth: 1, dash: [2, 7]))
+                .stroke(Color.white.opacity(0.13), style: StrokeStyle(lineWidth: 1, dash: [1.6, 7]))
             }
         }
     }
@@ -945,44 +946,43 @@ private struct SkinTonePreviewGrid: View {
 private extension EmojiSkinTone {
     var swatchFill: LinearGradient {
         LinearGradient(
-            colors: swatchColors,
+            colors: [swatchColor, swatchColor],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
     }
 
-    private var swatchColors: [Color] {
+    var swatchColor: Color {
         switch self {
         case .standard:
-            return [
-                Color(red: 1.00, green: 0.80, blue: 0.24),
-                Color(red: 0.94, green: 0.64, blue: 0.10)
-            ]
+            return Color(red: 0.98, green: 0.75, blue: 0.18)
         case .light:
-            return [
-                Color(red: 1.00, green: 0.83, blue: 0.62),
-                Color(red: 0.92, green: 0.66, blue: 0.41)
-            ]
+            return Color(red: 0.95, green: 0.73, blue: 0.50)
         case .mediumLight:
-            return [
-                Color(red: 0.86, green: 0.58, blue: 0.34),
-                Color(red: 0.72, green: 0.43, blue: 0.22)
-            ]
+            return Color(red: 0.82, green: 0.51, blue: 0.27)
         case .medium:
-            return [
-                Color(red: 0.66, green: 0.40, blue: 0.23),
-                Color(red: 0.50, green: 0.28, blue: 0.14)
-            ]
+            return Color(red: 0.61, green: 0.35, blue: 0.18)
         case .mediumDark:
-            return [
-                Color(red: 0.43, green: 0.25, blue: 0.15),
-                Color(red: 0.30, green: 0.16, blue: 0.09)
-            ]
+            return Color(red: 0.36, green: 0.19, blue: 0.10)
         case .dark:
-            return [
-                Color(red: 0.28, green: 0.18, blue: 0.13),
-                Color(red: 0.17, green: 0.10, blue: 0.07)
-            ]
+            return Color(red: 0.20, green: 0.10, blue: 0.07)
+        }
+    }
+
+    var glowColor: Color {
+        switch self {
+        case .standard:
+            return Color(red: 1.0, green: 0.74, blue: 0.16)
+        case .light:
+            return Color(red: 1.0, green: 0.78, blue: 0.48)
+        case .mediumLight:
+            return Color(red: 0.82, green: 0.48, blue: 0.22)
+        case .medium:
+            return Color(red: 0.60, green: 0.34, blue: 0.18)
+        case .mediumDark:
+            return Color(red: 0.36, green: 0.20, blue: 0.12)
+        case .dark:
+            return Color(red: 0.22, green: 0.13, blue: 0.08)
         }
     }
 }
@@ -1000,6 +1000,21 @@ private struct BlurSwapTransitionModifier: ViewModifier {
     }
 }
 
+private struct AppearanceBlurTransitionModifier: ViewModifier {
+    let blurRadius: CGFloat
+    let scale: CGFloat
+    let yOffset: CGFloat
+    let opacity: Double
+
+    func body(content: Content) -> some View {
+        content
+            .blur(radius: blurRadius)
+            .scaleEffect(scale)
+            .offset(y: yOffset)
+            .opacity(opacity)
+    }
+}
+
 private extension AnyTransition {
     static var softBlurSwap: AnyTransition {
         .asymmetric(
@@ -1010,6 +1025,19 @@ private extension AnyTransition {
             removal: .modifier(
                 active: BlurSwapTransitionModifier(blurRadius: 12, scale: 1.08, opacity: 0),
                 identity: BlurSwapTransitionModifier(blurRadius: 0, scale: 1, opacity: 1)
+            )
+        )
+    }
+
+    static var appearanceBlurSwap: AnyTransition {
+        .asymmetric(
+            insertion: .modifier(
+                active: AppearanceBlurTransitionModifier(blurRadius: 18, scale: 0.72, yOffset: 18, opacity: 0),
+                identity: AppearanceBlurTransitionModifier(blurRadius: 0, scale: 1, yOffset: 0, opacity: 1)
+            ),
+            removal: .modifier(
+                active: AppearanceBlurTransitionModifier(blurRadius: 22, scale: 1.20, yOffset: -16, opacity: 0),
+                identity: AppearanceBlurTransitionModifier(blurRadius: 0, scale: 1, yOffset: 0, opacity: 1)
             )
         )
     }
@@ -1029,17 +1057,17 @@ private struct KeybindsSettingsPane: View {
                 )
 
                 ShortcutFeatureTile(
-                    icon: "return",
-                    title: "Insert",
-                    subtitle: "Use selected emoji",
-                    keys: ["Tab"]
+                    icon: "arrow.left.arrow.right",
+                    title: "Choose",
+                    subtitle: "Move inline pick",
+                    keys: ["←", "→"]
                 )
             }
 
             SettingsPanel(title: "Inline Suggestions", subtitle: "When the popup is visible") {
-                ShortcutCommandRow(icon: "return", title: "Insert selected emoji", keys: ["Tab"])
-                SettingsDivider()
                 ShortcutCommandRow(icon: "arrow.left.arrow.right", title: "Move selection", keys: ["←", "→"])
+                SettingsDivider()
+                ShortcutCommandRow(icon: "return", title: "Insert selected emoji", keys: ["Return", "Tab"])
                 SettingsDivider()
                 ShortcutCommandRow(icon: "escape", title: "Dismiss suggestions", keys: ["Esc"])
             }
@@ -1058,16 +1086,7 @@ private struct ShortcutHeroPanel: View {
         HStack(spacing: 13) {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.accentColor.opacity(0.24),
-                                Color.cyan.opacity(0.12)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(Color.accentColor.opacity(0.12))
 
                 Image(systemName: "command.circle.fill")
                     .font(.system(size: 21, weight: .bold))
@@ -1076,7 +1095,7 @@ private struct ShortcutHeroPanel: View {
             .frame(width: 46, height: 46)
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.white.opacity(0.13), lineWidth: 1)
+                    .stroke(Color.accentColor.opacity(0.18), lineWidth: 1)
             )
 
             VStack(alignment: .leading, spacing: 3) {
@@ -1100,11 +1119,11 @@ private struct ShortcutHeroPanel: View {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.black.opacity(0.08))
+                .fill(SettingsSurfaceStyle.panelFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                .stroke(SettingsSurfaceStyle.border, lineWidth: 1)
         )
     }
 }
@@ -1722,16 +1741,7 @@ private struct StatsHeroPanel: View {
         HStack(spacing: 13) {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.accentColor.opacity(0.24),
-                                Color.green.opacity(0.12)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(Color.accentColor.opacity(0.12))
 
                 Image(systemName: "chart.bar.xaxis")
                     .font(.system(size: 20, weight: .bold))
@@ -1740,7 +1750,7 @@ private struct StatsHeroPanel: View {
             .frame(width: 46, height: 46)
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.white.opacity(0.13), lineWidth: 1)
+                    .stroke(Color.accentColor.opacity(0.18), lineWidth: 1)
             )
 
             VStack(alignment: .leading, spacing: 3) {
@@ -1766,11 +1776,11 @@ private struct StatsHeroPanel: View {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.black.opacity(0.08))
+                .fill(SettingsSurfaceStyle.panelFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                .stroke(SettingsSurfaceStyle.border, lineWidth: 1)
         )
     }
 }

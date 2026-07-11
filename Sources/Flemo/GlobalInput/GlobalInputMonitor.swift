@@ -190,7 +190,7 @@ class GlobalInputMonitor: NSObject {
             case 124, 125:
                 DispatchQueue.main.async { [weak self] in self?.onNavigateSuggestions?(1) }
                 return true
-            case 48:
+            case 36, 48, 76:
                 DispatchQueue.main.async { [weak self] in self?.onConfirmSuggestion?() }
                 return true
             case 53:

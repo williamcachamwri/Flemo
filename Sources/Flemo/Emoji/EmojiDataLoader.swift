@@ -41,9 +41,11 @@ class EmojiDataLoader {
     func preferredEmojis(
         personSkinTone: EmojiSkinTone,
         manSkinTone: EmojiSkinTone,
-        womanSkinTone: EmojiSkinTone
+        womanSkinTone: EmojiSkinTone,
+        gestureSkinTone: EmojiSkinTone? = nil
     ) -> [Emoji] {
-        let cacheKey = "\(personSkinTone.rawValue)|\(manSkinTone.rawValue)|\(womanSkinTone.rawValue)"
+        let resolvedGestureSkinTone = gestureSkinTone ?? personSkinTone
+        let cacheKey = "\(personSkinTone.rawValue)|\(manSkinTone.rawValue)|\(womanSkinTone.rawValue)|\(resolvedGestureSkinTone.rawValue)"
         cacheLock.lock()
         if let cached = normalizedCache[cacheKey] {
             cacheLock.unlock()
@@ -55,7 +57,8 @@ class EmojiDataLoader {
             from: allEmojis,
             personSkinTone: personSkinTone,
             manSkinTone: manSkinTone,
-            womanSkinTone: womanSkinTone
+            womanSkinTone: womanSkinTone,
+            gestureSkinTone: resolvedGestureSkinTone
         )
 
         cacheLock.lock()

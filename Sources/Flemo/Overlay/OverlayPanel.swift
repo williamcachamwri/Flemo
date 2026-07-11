@@ -23,8 +23,13 @@ class OverlayPanel: NSPanel {
 
         contentView.wantsLayer = true
         contentView.layer?.backgroundColor = NSColor.clear.cgColor
+        contentView.layer?.isOpaque = false
         contentView.layer?.masksToBounds = false
+        contentView.enclosingScrollView?.drawsBackground = false
         self.contentView = contentView
+        self.contentView?.wantsLayer = true
+        self.contentView?.layer?.backgroundColor = NSColor.clear.cgColor
+        self.contentView?.layer?.isOpaque = false
     }
 
     func show(at axPoint: NSPoint) {

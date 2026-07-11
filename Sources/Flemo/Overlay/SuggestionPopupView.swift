@@ -8,6 +8,7 @@ struct SuggestionPopupView: View {
         InlineSuggestionPillView(
             entries: visibleSuggestions(),
             selectedIndex: appState.selectedSuggestionIndex,
+            navigationActive: appState.inlineSuggestionNavigationActive,
             layout: appState.inlineSuggestionLayout,
             label: appState.currentSuggestionLabel,
             theme: appState.popupTheme,
@@ -36,6 +37,7 @@ struct InlineSuggestionEntry: Identifiable {
 struct InlineSuggestionPillView: View {
     let entries: [InlineSuggestionEntry]
     let selectedIndex: Int
+    let navigationActive: Bool
     let layout: InlineSuggestionLayout
     let label: String
     let theme: PopupTheme
@@ -52,6 +54,7 @@ struct InlineSuggestionPillView: View {
                     SuggestionPillButton(
                         emoji: entry.item.emoji,
                         isSelected: entry.absoluteIndex == selectedIndex,
+                        isArmed: navigationActive && entry.absoluteIndex == selectedIndex,
                         itemSize: metrics.itemSize,
                         fontSize: metrics.fontSize,
                         selectedFill: themeStyle.selectionFill
@@ -99,17 +102,27 @@ struct InlineSuggestionPillView: View {
         .padding(.vertical, metrics.verticalPadding)
         .frame(width: metrics.width, height: metrics.height, alignment: .leading)
         .fixedSize()
-        .background(
+        .background {
             RoundedRectangle(cornerRadius: metrics.cornerRadius, style: .continuous)
                 .fill(themeStyle.background)
-        )
+
+            if usesLiquidGlassSurface {
+                LiquidGlassSystemSurface(cornerRadius: metrics.cornerRadius)
+                LiquidGlassFallbackFill(cornerRadius: metrics.cornerRadius)
+            }
+        }
         .overlay(
             RoundedRectangle(cornerRadius: metrics.cornerRadius, style: .continuous)
                 .stroke(themeStyle.border, lineWidth: 1)
         )
-        .shadow(color: themeStyle.shadow, radius: 16, y: 8)
+        .overlay {
+            if usesLiquidGlassSurface {
+                LiquidGlassPopupChrome(cornerRadius: metrics.cornerRadius)
+            }
+        }
         .padding(metrics.outerPadding)
         .animation(.spring(response: 0.24, dampingFraction: 0.88), value: selectedIndex)
+        .animation(.spring(response: 0.22, dampingFraction: 0.86), value: navigationActive)
         .animation(.spring(response: 0.30, dampingFraction: 0.80, blendDuration: 0.08), value: entriesSignature)
         .animation(.spring(response: 0.24, dampingFraction: 0.88), value: label)
         .animation(.spring(response: 0.34, dampingFraction: 0.84, blendDuration: 0.08), value: layout)
@@ -118,6 +131,10 @@ struct InlineSuggestionPillView: View {
 
     private var entriesSignature: String {
         entries.map { $0.item.emoji.character }.joined(separator: "")
+    }
+
+    private var usesLiquidGlassSurface: Bool {
+        theme == .liquidGlass
     }
 
     private func popupMetrics() -> PopupMetrics {
@@ -149,7 +166,7 @@ struct InlineSuggestionPillView: View {
             labelFontSize: labelFontSize,
             labelWidth: width - horizontalPadding * 2,
             cornerRadius: layout == .descriptive ? 26 : totalHeight / 2,
-            outerPadding: 4
+            outerPadding: 0
         )
     }
 
@@ -164,23 +181,14 @@ struct InlineSuggestionPillView: View {
                 selectionFill: Color.white.opacity(0.14),
                 shadow: Color.black.opacity(0.22)
             )
-        case .glass:
+        case .liquidGlass:
             return PopupThemeStyle(
-                background: AnyShapeStyle(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.26),
-                            Color(red: 0.18, green: 0.42, blue: 0.95).opacity(0.42)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                ),
-                border: Color.white.opacity(0.34),
-                divider: Color.white.opacity(0.20),
-                secondaryText: Color.white.opacity(0.82),
+                background: AnyShapeStyle(Color.clear),
+                border: Color.white.opacity(0.16),
+                divider: Color.white.opacity(0.18),
+                secondaryText: Color.white.opacity(0.84),
                 selectionFill: Color.white.opacity(0.20),
-                shadow: Color.black.opacity(0.18)
+                shadow: Color.clear
             )
         case .midnight:
             return PopupThemeStyle(
@@ -294,9 +302,154 @@ struct InlineSuggestionPillView: View {
     }
 }
 
+private struct LiquidGlassSystemSurface: View {
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        Group {
+            if #available(macOS 26.0, *) {
+                Color.clear
+                    .glassEffect(
+                        .regular
+                            .tint(Color(red: 0.78, green: 0.86, blue: 1.0).opacity(0.10))
+                            .interactive(),
+                        in: .rect(cornerRadius: cornerRadius, style: .continuous)
+                    )
+            }
+        }
+    }
+}
+
+private struct LiquidGlassFallbackFill: View {
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        Group {
+            if #available(macOS 26.0, *) {
+                EmptyView()
+            } else {
+                LiquidGlassFallbackShape(cornerRadius: cornerRadius)
+            }
+        }
+    }
+}
+
+private struct LiquidGlassFallbackShape: View {
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+
+        ZStack {
+            shape
+                .fill(.ultraThinMaterial)
+
+            shape
+                .fill(Color(red: 0.04, green: 0.045, blue: 0.055).opacity(0.28))
+
+            shape
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.20),
+                            Color.white.opacity(0.06),
+                            Color(red: 0.50, green: 0.68, blue: 1.0).opacity(0.10)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .blendMode(.screen)
+
+            shape
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.black.opacity(0.04),
+                            Color.black.opacity(0.14)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .blendMode(.multiply)
+        }
+        .clipShape(shape)
+    }
+}
+
+private struct LiquidGlassPopupChrome: View {
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+
+        ZStack {
+            shape
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.58),
+                            Color.white.opacity(0.18),
+                            Color(red: 0.58, green: 0.74, blue: 1.0).opacity(0.20),
+                            Color.black.opacity(0.16)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1.1
+                )
+
+            shape
+                .strokeBorder(Color.white.opacity(0.08), lineWidth: 2.4)
+                .blur(radius: 0.4)
+                .blendMode(.screen)
+
+            GeometryReader { proxy in
+                let width = proxy.size.width
+                let height = proxy.size.height
+
+                ZStack(alignment: .topLeading) {
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.34),
+                                    Color.white.opacity(0.04)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(
+                            width: max(58, width * 0.34),
+                            height: max(12, height * 0.28)
+                        )
+                        .blur(radius: 8)
+                        .offset(x: width * 0.08, y: 2)
+
+                    Circle()
+                        .fill(Color.white.opacity(0.09))
+                        .frame(width: max(34, height * 1.10), height: max(34, height * 1.10))
+                        .blur(radius: 12)
+                        .offset(x: width - height * 0.85, y: height * 0.10)
+
+                    Rectangle()
+                        .fill(Color.white.opacity(0.08))
+                        .frame(height: 1)
+                        .offset(y: 1)
+                }
+                .clipShape(shape)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 struct SuggestionPillButton: View {
     let emoji: Emoji
     let isSelected: Bool
+    let isArmed: Bool
     let itemSize: CGFloat
     let fontSize: CGFloat
     let selectedFill: Color
@@ -309,8 +462,14 @@ struct SuggestionPillButton: View {
                 .frame(width: itemSize, height: itemSize)
                 .background(
                     Circle()
-                        .fill(isSelected ? selectedFill : Color.clear)
+                        .fill(isSelected ? selectedFill.opacity(isArmed ? 1.18 : 0.82) : Color.clear)
                 )
+                .overlay(
+                    Circle()
+                        .stroke(isArmed ? Color.white.opacity(0.36) : Color.clear, lineWidth: 1.5)
+                )
+                .shadow(color: isArmed ? Color.white.opacity(0.16) : Color.clear, radius: 8, y: 3)
+                .scaleEffect(isArmed ? 1.08 : (isSelected ? 1.03 : 1))
         }
         .buttonStyle(.plain)
         .help(emoji.name)

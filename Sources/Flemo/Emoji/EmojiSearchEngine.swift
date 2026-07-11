@@ -23,9 +23,33 @@ class EmojiSearchEngine {
     }
 
     func search(keyword: String, maxResults: Int = 10) -> [Emoji] {
+        search(
+            keyword: keyword,
+            maxResults: maxResults,
+            personSkinTone: AppSettings.shared.personSkinTone,
+            manSkinTone: AppSettings.shared.manSkinTone,
+            womanSkinTone: AppSettings.shared.womanSkinTone,
+            gestureSkinTone: AppSettings.shared.gestureSkinTone
+        )
+    }
+
+    func search(
+        keyword: String,
+        maxResults: Int = 10,
+        personSkinTone: EmojiSkinTone,
+        manSkinTone: EmojiSkinTone,
+        womanSkinTone: EmojiSkinTone,
+        gestureSkinTone: EmojiSkinTone
+    ) -> [Emoji] {
         let lowerKeyword = keyword.lowercased().trimmingCharacters(in: .whitespaces)
         guard !lowerKeyword.isEmpty else {
-            return topFrequentlyUsed(limit: maxResults)
+            return topFrequentlyUsed(
+                limit: maxResults,
+                personSkinTone: personSkinTone,
+                manSkinTone: manSkinTone,
+                womanSkinTone: womanSkinTone,
+                gestureSkinTone: gestureSkinTone
+            )
         }
 
         var scored: [(Emoji, Int)] = []
@@ -43,9 +67,10 @@ class EmojiSearchEngine {
         scored.sort { $0.1 > $1.1 }
         let preferred = EmojiSkinToneNormalizer.preferredEmojis(
             from: scored.map { $0.0 },
-            personSkinTone: AppSettings.shared.personSkinTone,
-            manSkinTone: AppSettings.shared.manSkinTone,
-            womanSkinTone: AppSettings.shared.womanSkinTone
+            personSkinTone: personSkinTone,
+            manSkinTone: manSkinTone,
+            womanSkinTone: womanSkinTone,
+            gestureSkinTone: gestureSkinTone
         )
         return Array(preferred.prefix(maxResults))
     }
@@ -85,7 +110,13 @@ class EmojiSearchEngine {
         return score
     }
 
-    private func topFrequentlyUsed(limit: Int) -> [Emoji] {
+    private func topFrequentlyUsed(
+        limit: Int,
+        personSkinTone: EmojiSkinTone,
+        manSkinTone: EmojiSkinTone,
+        womanSkinTone: EmojiSkinTone,
+        gestureSkinTone: EmojiSkinTone
+    ) -> [Emoji] {
         let freq = FrequencyTracker.shared.topEmojiCharacters(limit: limit * 8)
         var result: [Emoji] = []
         var seen = Set<String>()
@@ -94,9 +125,10 @@ class EmojiSearchEngine {
                 let preferred = EmojiSkinToneNormalizer.preferredReplacement(
                     for: emoji,
                     in: dataLoader.allEmojis,
-                    personSkinTone: AppSettings.shared.personSkinTone,
-                    manSkinTone: AppSettings.shared.manSkinTone,
-                    womanSkinTone: AppSettings.shared.womanSkinTone
+                    personSkinTone: personSkinTone,
+                    manSkinTone: manSkinTone,
+                    womanSkinTone: womanSkinTone,
+                    gestureSkinTone: gestureSkinTone
                 )
                 let key = EmojiSkinToneNormalizer.baseKey(for: preferred.character)
                 guard !seen.contains(key) else { continue }
@@ -105,12 +137,20 @@ class EmojiSearchEngine {
                 if result.count >= limit { break }
             }
         }
-        if result.isEmpty {
-            result = Array(dataLoader.preferredEmojis(
-                personSkinTone: AppSettings.shared.personSkinTone,
-                manSkinTone: AppSettings.shared.manSkinTone,
-                womanSkinTone: AppSettings.shared.womanSkinTone
-            ).prefix(limit))
+
+        if result.count < limit {
+            for emoji in dataLoader.preferredEmojis(
+                personSkinTone: personSkinTone,
+                manSkinTone: manSkinTone,
+                womanSkinTone: womanSkinTone,
+                gestureSkinTone: gestureSkinTone
+            ) {
+                let key = EmojiSkinToneNormalizer.baseKey(for: emoji.character)
+                guard !seen.contains(key) else { continue }
+                result.append(emoji)
+                seen.insert(key)
+                if result.count >= limit { break }
+            }
         }
         return result
     }

@@ -7,6 +7,7 @@ struct OnboardingView: View {
     @ObservedObject private var appState = AppState.shared
     @State private var step = 0
     @State private var testInput = ""
+    @State private var testEntries: [InlineSuggestionEntry] = []
     @State private var isAnimating = false
     @State private var selectedIndex = 0
     @FocusState private var tryInputFocused: Bool
@@ -17,7 +18,9 @@ struct OnboardingView: View {
     var body: some View {
         ZStack {
             OnboardingMaterialView()
-            ambientGlow
+            if step == 0 {
+                ambientGlow
+            }
 
             VStack(spacing: 0) {
                 topBar
@@ -33,6 +36,7 @@ struct OnboardingView: View {
             }
         }
         .onReceive(statusTimer) { _ in
+            guard step == 1 else { return }
             permissions.refreshStatus()
         }
         .onChange(of: step) { _, newStep in
@@ -200,205 +204,109 @@ struct OnboardingView: View {
     }
 
     private var tryItStep: some View {
-        VStack(spacing: 13) {
+        VStack(spacing: 18) {
             VStack(spacing: 5) {
-                Text("Try it out")
+                Text("Try Flemo")
                     .font(.system(size: 24, weight: .bold, design: .rounded))
 
-                Text("A quick rehearsal with the real search engine.")
+                Text("A tiny inline test before you start.")
                     .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary.opacity(0.72))
+                    .foregroundColor(.secondary.opacity(0.70))
             }
 
-            VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 10) {
-                    Image(systemName: "sparkle.magnifyingglass")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.white.opacity(0.88))
-                        .frame(width: 32, height: 32)
+                    Text(appState.triggerCharacter)
+                        .font(.system(size: 15, weight: .bold, design: .monospaced))
+                        .foregroundColor(.primary.opacity(0.90))
+                        .frame(width: 28, height: 28)
                         .background(
-                            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                .fill(Color.white.opacity(0.11))
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .fill(Color.secondary.opacity(0.10))
                         )
 
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Inline preview")
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundColor(.primary.opacity(0.92))
-
-                        Text("Lives beside your cursor")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundColor(.secondary.opacity(0.64))
-                    }
-
-                    Spacer()
-
-                    TryStatusPill(
-                        isActive: !testEntries.isEmpty,
-                        text: testEntries.isEmpty ? "waiting" : "\(testEntries.count) matches"
-                    )
-                }
-                .padding(.horizontal, 15)
-                .padding(.vertical, 11)
-
-                Rectangle()
-                    .fill(Color.white.opacity(0.09))
-                    .frame(height: 1)
-
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 9) {
-                            HStack(spacing: 10) {
-                                Text(appState.triggerCharacter)
-                                    .font(.system(size: 15, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.primary.opacity(0.92))
-                                    .frame(width: 28, height: 28)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                            .fill(Color.black.opacity(0.22))
-                                    )
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                            .stroke(Color.white.opacity(0.16), lineWidth: 1)
-                                    )
-
-                                TextField("cat, party, fire...", text: $testInput)
-                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .textFieldStyle(.plain)
-                                    .focused($tryInputFocused)
-                                    .onChange(of: testInput) { _, _ in
-                                        selectedIndex = 0
-                                    }
-
-                                if !testInput.isEmpty {
-                                    Button {
-                                        withAnimation(.spring(response: 0.26, dampingFraction: 0.86)) {
-                                            testInput = ""
-                                            selectedIndex = 0
-                                        }
-                                    } label: {
-                                        Image(systemName: "xmark")
-                                            .font(.system(size: 10, weight: .bold))
-                                            .foregroundColor(.secondary)
-                                            .frame(width: 24, height: 24)
-                                            .background(Circle().fill(Color.white.opacity(0.08)))
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(Color.black.opacity(0.18))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(
-                                        tryInputFocused ? Color.accentColor.opacity(0.48) : Color.white.opacity(0.13),
-                                        lineWidth: 1
-                                    )
-                            )
-                            .shadow(
-                                color: tryInputFocused ? Color.accentColor.opacity(0.16) : Color.clear,
-                                radius: 14,
-                                y: 7
-                            )
-
-                            HStack(spacing: 7) {
-                                ForEach(tryExamples) { example in
-                                    TryExampleChip(example: example, trigger: appState.triggerCharacter) {
-                                        withAnimation(.spring(response: 0.28, dampingFraction: 0.84)) {
-                                            testInput = appState.triggerCharacter + example.keyword
-                                            selectedIndex = 0
-                                            tryInputFocused = true
-                                        }
-                                    }
-                                }
-                            }
+                    TextField("cat, party, fire", text: $testInput)
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .textFieldStyle(.plain)
+                        .focused($tryInputFocused)
+                        .onChange(of: testInput) { _, _ in
+                            selectedIndex = 0
+                            refreshTryResults()
                         }
 
-                        TrySelectedPreview(emoji: selectedTestEmoji, label: extractedLabel)
-                    }
-
-                    VStack(alignment: .leading, spacing: 7) {
-                        HStack {
-                            Text(extractedKeyword.isEmpty ? "Recent picks" : extractedLabel)
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .foregroundColor(.secondary.opacity(0.68))
-
-                            Spacer()
-
-                            HStack(spacing: 5) {
-                                TryKeyCap("Tab")
-                                TryKeyCap("Esc")
-                            }
-                            .opacity(0.72)
+                    if !testInput.isEmpty {
+                        Button {
+                            setTryInput("")
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.secondary.opacity(0.70))
                         }
-
-                        InlineSuggestionPillView(
-                            entries: testEntries,
-                            selectedIndex: selectedIndex,
-                            layout: appState.inlineSuggestionLayout,
-                            label: extractedLabel,
-                            theme: appState.popupTheme,
-                            baseHeight: 42,
-                            emojiHandler: { emoji in
-                                withAnimation(.spring(response: 0.28, dampingFraction: 0.84)) {
-                                    testInput = emoji.character
-                                    selectedIndex = 0
-                                }
-                            }
-                        )
-                        .offset(x: -4)
+                        .buttonStyle(.plain)
                     }
-                    .padding(9)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(Color.black.opacity(0.10))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.white.opacity(0.10), lineWidth: 1)
-                    )
                 }
-                .padding(12)
+                .padding(.horizontal, 12)
+                .frame(height: 44)
+                .background(
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .fill(Color.black.opacity(0.075))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .stroke(tryInputFocused ? Color.accentColor.opacity(0.30) : Color.white.opacity(0.08), lineWidth: 1)
+                )
+
+                HStack(spacing: 7) {
+                    ForEach(tryExamples) { example in
+                        TryExampleChip(example: example, trigger: appState.triggerCharacter) {
+                            setTryInput(appState.triggerCharacter + example.keyword)
+                            tryInputFocused = true
+                        }
+                    }
+
+                    Spacer(minLength: 0)
+
+                    HStack(spacing: 5) {
+                        TryKeyCap("←")
+                        TryKeyCap("→")
+                        TryKeyCap("Return")
+                    }
+                }
+
+                Divider()
+                    .background(Color.white.opacity(0.055))
+
+                HStack(spacing: 14) {
+                    InlineSuggestionPillView(
+                        entries: testEntries,
+                        selectedIndex: selectedIndex,
+                        navigationActive: !testEntries.isEmpty,
+                        layout: appState.inlineSuggestionLayout,
+                        label: extractedLabel,
+                        theme: appState.popupTheme,
+                        baseHeight: 42,
+                        emojiHandler: { emoji in
+                            setTryInput(emoji.character)
+                        }
+                    )
+                    .offset(x: -4)
+
+                    Spacer(minLength: 0)
+
+                    TryResultSummary(emoji: selectedTestEmoji, label: extractedLabel)
+                }
+                .frame(height: 58)
             }
+            .padding(16)
             .frame(maxWidth: 500)
             .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.13),
-                                Color(red: 0.10, green: 0.12, blue: 0.16).opacity(0.22)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.black.opacity(0.055))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.24),
-                                Color.white.opacity(0.07)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.white.opacity(0.085), lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.16), radius: 22, y: 12)
-
-            HStack(spacing: 8) {
-                TryStepNote(icon: "cursorarrow.click.2", text: "Click any emoji")
-                TryStepNote(icon: "wand.and.stars", text: "Uses your settings")
-                TryStepNote(icon: "keyboard", text: "Same inline feel")
-            }
         }
     }
 
@@ -480,10 +388,14 @@ struct OnboardingView: View {
     // MARK: Search helpers
 
     private var extractedKeyword: String {
+        keyword(from: testInput)
+    }
+
+    private func keyword(from input: String) -> String {
         guard let trigger = appState.triggerCharacter.first,
-              let index = testInput.lastIndex(of: trigger)
+              let index = input.lastIndex(of: trigger)
         else { return "" }
-        return String(testInput[testInput.index(after: index)...])
+        return String(input[input.index(after: index)...])
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
@@ -491,13 +403,27 @@ struct OnboardingView: View {
         appState.triggerCharacter + extractedKeyword
     }
 
-    private var testEntries: [InlineSuggestionEntry] {
-        let keyword = extractedKeyword
+    private func makeTryEntries(for input: String) -> [InlineSuggestionEntry] {
+        let keyword = keyword(from: input)
         let emojis: [Emoji]
         if keyword.count >= appState.minTriggerLength {
-            emojis = EmojiSearchEngine.shared.search(keyword: keyword, maxResults: AppState.inlineVisibleCount)
+            emojis = EmojiSearchEngine.shared.search(
+                keyword: keyword,
+                maxResults: AppState.inlineVisibleCount,
+                personSkinTone: appState.personSkinTone,
+                manSkinTone: appState.manSkinTone,
+                womanSkinTone: appState.womanSkinTone,
+                gestureSkinTone: appState.gestureSkinTone
+            )
         } else if appState.inlinePanelOpenMode == .recents {
-            emojis = EmojiSearchEngine.shared.search(keyword: "", maxResults: AppState.inlineVisibleCount)
+            emojis = EmojiSearchEngine.shared.search(
+                keyword: "",
+                maxResults: AppState.inlineVisibleCount,
+                personSkinTone: appState.personSkinTone,
+                manSkinTone: appState.manSkinTone,
+                womanSkinTone: appState.womanSkinTone,
+                gestureSkinTone: appState.gestureSkinTone
+            )
         } else {
             emojis = []
         }
@@ -508,6 +434,12 @@ struct OnboardingView: View {
                 item: SuggestionItem(emoji: emoji)
             )
         }
+    }
+
+    private func refreshTryResults() {
+        let nextEntries = makeTryEntries(for: testInput)
+        testEntries = nextEntries
+        selectedIndex = min(selectedIndex, max(nextEntries.count - 1, 0))
     }
 
     private var selectedTestEmoji: Emoji? {
@@ -543,13 +475,20 @@ struct OnboardingView: View {
 
     private func prepareTryItStep() {
         if testInput.isEmpty {
-            testInput = appState.triggerCharacter + "cat"
-            selectedIndex = 0
+            setTryInput(appState.triggerCharacter + "cat")
+        } else {
+            refreshTryResults()
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
             tryInputFocused = true
         }
+    }
+
+    private func setTryInput(_ value: String) {
+        testInput = value
+        selectedIndex = 0
+        testEntries = makeTryEntries(for: value)
     }
 
     private func closeOnboarding() {
@@ -597,99 +536,33 @@ private struct TryExampleChip: View {
     }
 }
 
-private struct TrySelectedPreview: View {
+private struct TryResultSummary: View {
     let emoji: Emoji?
     let label: String
 
     var body: some View {
-        VStack(spacing: 7) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: previewColors,
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+        HStack(spacing: 9) {
+            Text(emoji?.character ?? "–")
+                .font(.system(size: 24))
+                .frame(width: 34, height: 34)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.secondary.opacity(0.08))
+                )
 
-                if let emoji {
-                    Text(emoji.character)
-                        .font(.system(size: 36))
-                        .shadow(color: .black.opacity(0.20), radius: 8, y: 4)
-                } else {
-                    Image(systemName: "face.smiling")
-                        .font(.system(size: 25, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.56))
-                }
-            }
-            .frame(width: 78, height: 72)
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
-            )
-
-            VStack(spacing: 1) {
-                Text(emoji?.name.capitalized ?? "Ready")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(emoji?.name.capitalized ?? "No match")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
                     .foregroundColor(.primary.opacity(0.84))
                     .lineLimit(1)
 
-                Text(label.isEmpty ? "type a trigger" : label)
+                Text(label.isEmpty ? "recent" : label)
                     .font(.system(size: 10, weight: .semibold, design: .rounded))
-                    .foregroundColor(.secondary.opacity(0.64))
+                    .foregroundColor(.secondary.opacity(0.62))
                     .lineLimit(1)
             }
-            .frame(width: 88)
         }
-        .padding(7)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(0.075))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.10), lineWidth: 1)
-        )
-    }
-
-    private var previewColors: [Color] {
-        guard let emoji else {
-            return [
-                Color.white.opacity(0.12),
-                Color.white.opacity(0.04)
-            ]
-        }
-
-        let extracted = EmojiColorExtractor.shared.colors(for: emoji.character)
-        return [
-            extracted.first?.opacity(0.45) ?? Color.accentColor.opacity(0.42),
-            extracted.dropFirst().first?.opacity(0.22) ?? Color.cyan.opacity(0.20)
-        ]
-    }
-}
-
-private struct TryStatusPill: View {
-    let isActive: Bool
-    let text: String
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(isActive ? Color.green : Color.secondary.opacity(0.52))
-                .frame(width: 6, height: 6)
-                .shadow(color: isActive ? Color.green.opacity(0.45) : .clear, radius: 6)
-
-            Text(text)
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .foregroundColor(isActive ? Color.green.opacity(0.92) : .secondary.opacity(0.72))
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 6)
-        .background(
-            Capsule(style: .continuous)
-                .fill((isActive ? Color.green : Color.secondary).opacity(0.12))
-        )
+        .frame(width: 162, alignment: .leading)
     }
 }
 
@@ -714,29 +587,6 @@ private struct TryKeyCap: View {
                 RoundedRectangle(cornerRadius: 5, style: .continuous)
                     .stroke(Color.white.opacity(0.10), lineWidth: 1)
             )
-    }
-}
-
-private struct TryStepNote: View {
-    let icon: String
-    let text: String
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.secondary.opacity(0.68))
-
-            Text(text)
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundColor(.secondary.opacity(0.66))
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 6)
-        .background(
-            Capsule(style: .continuous)
-                .fill(Color.secondary.opacity(0.08))
-        )
     }
 }
 

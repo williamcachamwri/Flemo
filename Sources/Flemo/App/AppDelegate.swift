@@ -152,9 +152,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             return
         }
 
+        let personTone = appState.personSkinTone
+        let gestureTone = appState.gestureSkinTone
+        let manTone = appState.manSkinTone
+        let womanTone = appState.womanSkinTone
+
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
-            let results = EmojiSearchEngine.shared.search(keyword: keyword, maxResults: 10)
+            let results = EmojiSearchEngine.shared.search(
+                keyword: keyword,
+                maxResults: 10,
+                personSkinTone: personTone,
+                manSkinTone: manTone,
+                womanSkinTone: womanTone,
+                gestureSkinTone: gestureTone
+            )
             let nextSuggestions = results.map { SuggestionItem(emoji: $0) }
 
             DispatchQueue.main.async {
@@ -163,6 +175,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     self.appState.suggestions = nextSuggestions
                     self.appState.selectedSuggestionIndex = 0
                     self.appState.visibleSuggestionStart = 0
+                    self.appState.inlineSuggestionNavigationActive = !nextSuggestions.isEmpty
                     self.appState.isShowingSuggestions = !nextSuggestions.isEmpty
                 }
                 if self.appState.isShowingSuggestions {
@@ -200,6 +213,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         appState.suggestions = []
         appState.selectedSuggestionIndex = 0
         appState.visibleSuggestionStart = 0
+        appState.inlineSuggestionNavigationActive = false
         currentKeyword = ""
         appState.currentSuggestionQuery = ""
         currentSuggestionReplacesTrigger = false
@@ -210,6 +224,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard appState.isShowingSuggestions, !appState.suggestions.isEmpty else { return }
         let maxIndex = appState.suggestions.count - 1
         let next = min(max(appState.selectedSuggestionIndex + delta, 0), maxIndex)
+        appState.inlineSuggestionNavigationActive = true
         appState.selectedSuggestionIndex = next
 
         clampVisibleSelection()
@@ -410,6 +425,9 @@ class AppState: ObservableObject {
     @Published var personSkinTone: EmojiSkinTone = AppSettings.shared.personSkinTone {
         didSet { AppSettings.shared.personSkinTone = personSkinTone }
     }
+    @Published var gestureSkinTone: EmojiSkinTone = AppSettings.shared.gestureSkinTone {
+        didSet { AppSettings.shared.gestureSkinTone = gestureSkinTone }
+    }
     @Published var manSkinTone: EmojiSkinTone = AppSettings.shared.manSkinTone {
         didSet { AppSettings.shared.manSkinTone = manSkinTone }
     }
@@ -425,6 +443,7 @@ class AppState: ObservableObject {
     @Published var currentSuggestionQuery: String = ""
     @Published var selectedSuggestionIndex: Int = 0
     @Published var visibleSuggestionStart: Int = 0
+    @Published var inlineSuggestionNavigationActive: Bool = false
     @Published var inlinePopupHeight: CGFloat = 62
 
     static let inlineVisibleCount = 4
@@ -437,6 +456,7 @@ class AppState: ObservableObject {
         inlineSuggestionLayout = AppSettings.shared.inlineSuggestionLayout
         popupTheme = AppSettings.shared.popupTheme
         personSkinTone = AppSettings.shared.personSkinTone
+        gestureSkinTone = AppSettings.shared.gestureSkinTone
         manSkinTone = AppSettings.shared.manSkinTone
         womanSkinTone = AppSettings.shared.womanSkinTone
         ignoredSiteRules = AppSettings.shared.ignoredSiteRules

@@ -67,6 +67,7 @@ struct AppSettingsData: Codable {
     var inlineSuggestionLayout: InlineSuggestionLayout
     var popupTheme: PopupTheme
     var personSkinTone: EmojiSkinTone
+    var gestureSkinTone: EmojiSkinTone
     var manSkinTone: EmojiSkinTone
     var womanSkinTone: EmojiSkinTone
     var ignoredSiteRules: [IgnoredSiteRule]
@@ -79,8 +80,9 @@ struct AppSettingsData: Codable {
         emojiBoardShortcut: ShortcutKey,
         inlinePanelOpenMode: InlinePanelOpenMode = .recents,
         inlineSuggestionLayout: InlineSuggestionLayout = .sleek,
-        popupTheme: PopupTheme = .nativeDark,
+        popupTheme: PopupTheme = .defaultForCurrentOS,
         personSkinTone: EmojiSkinTone = .standard,
+        gestureSkinTone: EmojiSkinTone = .standard,
         manSkinTone: EmojiSkinTone = .standard,
         womanSkinTone: EmojiSkinTone = .standard,
         ignoredSiteRules: [IgnoredSiteRule] = [],
@@ -94,6 +96,7 @@ struct AppSettingsData: Codable {
         self.inlineSuggestionLayout = inlineSuggestionLayout
         self.popupTheme = popupTheme
         self.personSkinTone = personSkinTone
+        self.gestureSkinTone = gestureSkinTone
         self.manSkinTone = manSkinTone
         self.womanSkinTone = womanSkinTone
         self.ignoredSiteRules = ignoredSiteRules
@@ -109,6 +112,8 @@ struct AppSettingsData: Codable {
         case inlineSuggestionLayout
         case popupTheme
         case personSkinTone
+        case gestureSkinTone
+        case handBodySkinTone
         case manSkinTone
         case womanSkinTone
         case ignoredSiteRules
@@ -124,8 +129,11 @@ struct AppSettingsData: Codable {
             ?? ShortcutKey(keyCode: 0x0E, modifiers: 0x0300)
         inlinePanelOpenMode = try container.decodeIfPresent(InlinePanelOpenMode.self, forKey: .inlinePanelOpenMode) ?? .recents
         inlineSuggestionLayout = try container.decodeIfPresent(InlineSuggestionLayout.self, forKey: .inlineSuggestionLayout) ?? .sleek
-        popupTheme = try container.decodeIfPresent(PopupTheme.self, forKey: .popupTheme) ?? .nativeDark
+        popupTheme = try container.decodeIfPresent(PopupTheme.self, forKey: .popupTheme) ?? .defaultForCurrentOS
         personSkinTone = try container.decodeIfPresent(EmojiSkinTone.self, forKey: .personSkinTone) ?? .standard
+        gestureSkinTone = try container.decodeIfPresent(EmojiSkinTone.self, forKey: .gestureSkinTone)
+            ?? container.decodeIfPresent(EmojiSkinTone.self, forKey: .handBodySkinTone)
+            ?? personSkinTone
         manSkinTone = try container.decodeIfPresent(EmojiSkinTone.self, forKey: .manSkinTone) ?? .standard
         womanSkinTone = try container.decodeIfPresent(EmojiSkinTone.self, forKey: .womanSkinTone) ?? .standard
         ignoredSiteRules = try container.decodeIfPresent([IgnoredSiteRule].self, forKey: .ignoredSiteRules) ?? []
@@ -142,6 +150,7 @@ struct AppSettingsData: Codable {
         try container.encode(inlineSuggestionLayout, forKey: .inlineSuggestionLayout)
         try container.encode(popupTheme, forKey: .popupTheme)
         try container.encode(personSkinTone, forKey: .personSkinTone)
+        try container.encode(gestureSkinTone, forKey: .gestureSkinTone)
         try container.encode(manSkinTone, forKey: .manSkinTone)
         try container.encode(womanSkinTone, forKey: .womanSkinTone)
         try container.encode(ignoredSiteRules, forKey: .ignoredSiteRules)
@@ -170,7 +179,7 @@ enum InlineSuggestionLayout: String, Codable, CaseIterable, Identifiable {
 
 enum PopupTheme: String, Codable, CaseIterable, Identifiable {
     case nativeDark = "Native Dark"
-    case glass = "Glass"
+    case liquidGlass = "Liquid Glass"
     case midnight = "Midnight"
     case frost = "Frost"
     case neon = "Neon"
@@ -178,7 +187,45 @@ enum PopupTheme: String, Codable, CaseIterable, Identifiable {
     case mono = "Mono"
     case aurora = "Aurora"
 
+    static var allCases: [PopupTheme] {
+        [
+            .liquidGlass,
+            .nativeDark,
+            .midnight,
+            .frost,
+            .neon,
+            .crimson,
+            .mono,
+            .aurora
+        ]
+    }
+
+    static var defaultForCurrentOS: PopupTheme {
+        if #available(macOS 26.0, *) {
+            return .liquidGlass
+        } else {
+            return .nativeDark
+        }
+    }
+
     var id: String { rawValue }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let storedValue = try container.decode(String.self)
+
+        switch storedValue {
+        case "Glass", PopupTheme.liquidGlass.rawValue:
+            self = .liquidGlass
+        default:
+            self = PopupTheme(rawValue: storedValue) ?? .defaultForCurrentOS
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 struct IgnoredSiteRule: Codable, Identifiable, Equatable {

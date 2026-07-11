@@ -46,6 +46,11 @@ class AppSettings {
         set { update { $0.personSkinTone = newValue } }
     }
 
+    var gestureSkinTone: EmojiSkinTone {
+        get { read(\.gestureSkinTone) }
+        set { update { $0.gestureSkinTone = newValue } }
+    }
+
     var manSkinTone: EmojiSkinTone {
         get { read(\.manSkinTone) }
         set { update { $0.manSkinTone = newValue } }
@@ -79,8 +84,9 @@ class AppSettings {
                 emojiBoardShortcut: ShortcutKey(keyCode: 0x0E, modifiers: 0x0300),
                 inlinePanelOpenMode: .recents,
                 inlineSuggestionLayout: .sleek,
-                popupTheme: .nativeDark,
+                popupTheme: .defaultForCurrentOS,
                 personSkinTone: .standard,
+                gestureSkinTone: .standard,
                 manSkinTone: .standard,
                 womanSkinTone: .standard,
             )
@@ -108,8 +114,9 @@ class AppSettings {
             emojiBoardShortcut: ShortcutKey(keyCode: 0x0E, modifiers: 0x0300),
             inlinePanelOpenMode: .recents,
             inlineSuggestionLayout: .sleek,
-            popupTheme: .nativeDark,
+            popupTheme: .defaultForCurrentOS,
             personSkinTone: .standard,
+            gestureSkinTone: .standard,
             manSkinTone: .standard,
             womanSkinTone: .standard,
             ignoredSiteRules: [],

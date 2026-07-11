@@ -39,14 +39,22 @@ struct EmojiBoardView: View {
         EmojiDataLoader.shared.preferredEmojis(
             personSkinTone: appState.personSkinTone,
             manSkinTone: appState.manSkinTone,
-            womanSkinTone: appState.womanSkinTone
+            womanSkinTone: appState.womanSkinTone,
+            gestureSkinTone: appState.gestureSkinTone
         )
     }
 
     private var filteredEmojis: [Emoji] {
         let keyword = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !keyword.isEmpty {
-            return EmojiSearchEngine.shared.search(keyword: keyword, maxResults: 700)
+            return EmojiSearchEngine.shared.search(
+                keyword: keyword,
+                maxResults: 700,
+                personSkinTone: appState.personSkinTone,
+                manSkinTone: appState.manSkinTone,
+                womanSkinTone: appState.womanSkinTone,
+                gestureSkinTone: appState.gestureSkinTone
+            )
         }
 
         if selectedCategory == "Favorites" {
@@ -97,6 +105,7 @@ struct EmojiBoardView: View {
         .frame(width: 680, height: 540)
         .onAppear { rebuildCounts() }
         .onChange(of: appState.personSkinTone) { _, _ in rebuildCounts() }
+        .onChange(of: appState.gestureSkinTone) { _, _ in rebuildCounts() }
         .onChange(of: appState.manSkinTone) { _, _ in rebuildCounts() }
         .onChange(of: appState.womanSkinTone) { _, _ in rebuildCounts() }
     }
@@ -105,7 +114,8 @@ struct EmojiBoardView: View {
         let emojis = EmojiDataLoader.shared.preferredEmojis(
             personSkinTone: appState.personSkinTone,
             manSkinTone: appState.manSkinTone,
-            womanSkinTone: appState.womanSkinTone
+            womanSkinTone: appState.womanSkinTone,
+            gestureSkinTone: appState.gestureSkinTone
         )
         var counts: [String: Int] = ["All": emojis.count]
         for emoji in emojis {
