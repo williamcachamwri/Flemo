@@ -122,8 +122,8 @@ struct AppSettingsData: Codable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        triggerCharacter = try container.decodeIfPresent(String.self, forKey: .triggerCharacter) ?? "`"
-        minTriggerLength = try container.decodeIfPresent(Int.self, forKey: .minTriggerLength) ?? 2
+        triggerCharacter = try container.decodeIfPresent(String.self, forKey: .triggerCharacter) ?? Constants.defaultTriggerCharacter
+        minTriggerLength = try container.decodeIfPresent(Int.self, forKey: .minTriggerLength) ?? Constants.defaultMinTriggerLength
         inlineTriggerEnabled = try container.decodeIfPresent(Bool.self, forKey: .inlineTriggerEnabled) ?? true
         emojiBoardShortcut = try container.decodeIfPresent(ShortcutKey.self, forKey: .emojiBoardShortcut)
             ?? ShortcutKey(keyCode: 0x0E, modifiers: 0x0300)

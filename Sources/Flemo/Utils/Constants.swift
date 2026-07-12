@@ -2,7 +2,8 @@ import Foundation
 
 enum Constants {
     static let appName = "Flemo"
-    static let defaultTriggerCharacter = "`"
+    static let defaultTriggerCharacter = ":"
+    static let legacyDefaultTriggerCharacter = "`"
     static let defaultMinTriggerLength = 2
     static let maxSuggestionResults = 10
     static let overlayPanelWidth: CGFloat = 340

@@ -209,24 +209,15 @@ struct OnboardingView: View {
                 Text("Try Flemo")
                     .font(.system(size: 24, weight: .bold, design: .rounded))
 
-                Text("A tiny inline test before you start.")
+                Text("Type \(appState.triggerCharacter)cat and pick a result.")
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundColor(.secondary.opacity(0.70))
             }
 
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 10) {
-                    Text(appState.triggerCharacter)
-                        .font(.system(size: 15, weight: .bold, design: .monospaced))
-                        .foregroundColor(.primary.opacity(0.90))
-                        .frame(width: 28, height: 28)
-                        .background(
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .fill(Color.secondary.opacity(0.10))
-                        )
-
-                    TextField("cat, party, fire", text: $testInput)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    TextField("\(appState.triggerCharacter)cat, \(appState.triggerCharacter)party, \(appState.triggerCharacter)fire", text: $testInput)
+                        .font(.system(size: 16, weight: .semibold, design: .monospaced))
                         .textFieldStyle(.plain)
                         .focused($tryInputFocused)
                         .onChange(of: testInput) { _, _ in
@@ -249,7 +240,7 @@ struct OnboardingView: View {
                 .frame(height: 44)
                 .background(
                     RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .fill(Color.black.opacity(0.075))
+                        .fill(Color.secondary.opacity(0.070))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 11, style: .continuous)
@@ -301,7 +292,7 @@ struct OnboardingView: View {
             .frame(maxWidth: 500)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.black.opacity(0.055))
+                    .fill(Color.secondary.opacity(0.045))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -525,7 +516,7 @@ private struct TryExampleChip: View {
             .padding(.vertical, 6)
             .background(
                 Capsule(style: .continuous)
-                    .fill(Color.white.opacity(0.09))
+                    .fill(Color.secondary.opacity(0.09))
             )
             .overlay(
                 Capsule(style: .continuous)
@@ -581,7 +572,7 @@ private struct TryKeyCap: View {
             .padding(.vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(Color.white.opacity(0.08))
+                    .fill(Color.secondary.opacity(0.09))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 5, style: .continuous)

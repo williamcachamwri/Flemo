@@ -3,10 +3,10 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 private enum SettingsSurfaceStyle {
-    static let panelFill = Color.black.opacity(0.055)
-    static let tileFill = Color.black.opacity(0.050)
-    static let iconFill = Color.secondary.opacity(0.085)
-    static let border = Color.white.opacity(0.105)
+    static let panelFill = Color.secondary.opacity(0.045)
+    static let tileFill = Color.secondary.opacity(0.035)
+    static let iconFill = Color.secondary.opacity(0.070)
+    static let border = Color.white.opacity(0.095)
     static let divider = Color.white.opacity(0.055)
 }
 
@@ -148,17 +148,17 @@ private struct GeneralSettingsPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             SettingsStatusPanel(
-                icon: "bolt.horizontal.circle.fill",
-                title: allPermissionsGranted ? "Ready" : "Needs access",
+                icon: allPermissionsGranted ? "checkmark.circle" : "exclamationmark.circle",
+                title: allPermissionsGranted ? "Ready" : "Finish setup",
                 subtitle: allPermissionsGranted
-                    ? "Flemo can watch for triggers and place emoji inline."
-                    : "Grant the missing macOS permissions to enable inline suggestions.",
-                status: allPermissionsGranted ? "Online" : "Action needed",
+                    ? "Inline suggestions can open near the cursor."
+                    : "Enable the missing permissions below.",
+                status: allPermissionsGranted ? "Ready" : "Needs access",
                 statusColor: allPermissionsGranted ? .green : .orange
             )
 
-            HStack(spacing: 10) {
-                PermissionStatusTile(
+            SettingsPanel(title: "Permissions", subtitle: "Required macOS access") {
+                PermissionStatusRow(
                     icon: "lock.shield",
                     title: "Accessibility",
                     detail: "Cursor and focused text",
@@ -167,7 +167,9 @@ private struct GeneralSettingsPane: View {
                     permissions.requestAccessibility()
                 }
 
-                PermissionStatusTile(
+                SettingsDivider()
+
+                PermissionStatusRow(
                     icon: "keyboard.badge.eye",
                     title: "Input Monitor",
                     detail: "Trigger and navigation keys",
@@ -176,7 +178,9 @@ private struct GeneralSettingsPane: View {
                     permissions.requestInputMonitoring()
                 }
 
-                PermissionStatusTile(
+                SettingsDivider()
+
+                PermissionStatusRow(
                     icon: "applescript",
                     title: "Automation",
                     detail: "Browser URLs for rules",
@@ -271,7 +275,7 @@ private struct SettingsStatusPanel: View {
     }
 }
 
-private struct PermissionStatusTile: View {
+private struct PermissionStatusRow: View {
     let icon: String
     let title: String
     let detail: String
@@ -279,67 +283,31 @@ private struct PermissionStatusTile: View {
     let action: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(granted ? .green : .orange)
-                    .frame(width: 30, height: 30)
-                    .background(
-                        RoundedRectangle(cornerRadius: 9, style: .continuous)
-                            .fill(SettingsSurfaceStyle.iconFill)
-                    )
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(granted ? .green : .orange)
+                .frame(width: 28, height: 28)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(SettingsSurfaceStyle.iconFill)
+                )
 
-                Spacer()
+            RowText(title: title, subtitle: detail)
 
-                Image(systemName: granted ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(granted ? .green : .orange)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary.opacity(0.92))
-                    .lineLimit(1)
-
-                Text(detail)
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
-                    .foregroundColor(.secondary.opacity(0.62))
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            Spacer()
 
             if granted {
-                Text("Granted")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                Label("Granted", systemImage: "checkmark")
+                    .labelStyle(.titleAndIcon)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundColor(.green)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Capsule(style: .continuous).fill(Color.green.opacity(0.12)))
             } else {
-                Button(action: action) {
-                    Label("Grant", systemImage: "arrow.up.right")
-                        .labelStyle(.titleAndIcon)
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 5)
-                        .background(Capsule(style: .continuous).fill(Color.accentColor))
-                }
-                .buttonStyle(.plain)
+                SmallActionButton(title: "Grant", icon: "arrow.up.right", action: action)
             }
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(SettingsSurfaceStyle.tileFill)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(granted ? SettingsSurfaceStyle.border : Color.orange.opacity(0.22), lineWidth: 1)
-        )
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
     }
 }
 
@@ -680,7 +648,7 @@ private struct InlineSuggestionSettingsPreview: View {
             )
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 150)
+        .frame(height: 126)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .animation(.spring(response: 0.34, dampingFraction: 0.84, blendDuration: 0.08), value: appState.inlineSuggestionLayout)
         .animation(.easeInOut(duration: 0.18), value: appState.popupTheme)
@@ -689,29 +657,23 @@ private struct InlineSuggestionSettingsPreview: View {
     private var previewBackground: some View {
         GeometryReader { proxy in
             ZStack {
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.31, green: 0.13, blue: 0.95),
-                        Color(red: 0.03, green: 0.27, blue: 0.88),
-                        Color(red: 0.02, green: 0.06, blue: 0.24)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.secondary.opacity(0.055))
 
-                Ellipse()
-                    .fill(Color.white.opacity(0.20))
-                    .frame(width: proxy.size.width * 0.9, height: proxy.size.height * 0.38)
-                    .rotationEffect(.degrees(-22))
-                    .blur(radius: 8)
-                    .offset(x: proxy.size.width * 0.12, y: -proxy.size.height * 0.08)
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach([CGFloat(0.72), CGFloat(0.46), CGFloat(0.58)], id: \.self) { widthFraction in
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(Color.secondary.opacity(0.16))
+                            .frame(width: proxy.size.width * widthFraction, height: 6)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
+                .padding(.top, 18)
+                .offset(y: -18)
 
-                Ellipse()
-                    .fill(Color.black.opacity(0.20))
-                    .frame(width: proxy.size.width * 1.1, height: proxy.size.height * 0.36)
-                    .rotationEffect(.degrees(-16))
-                    .blur(radius: 7)
-                    .offset(x: -proxy.size.width * 0.12, y: proxy.size.height * 0.22)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
             }
         }
     }
@@ -1168,7 +1130,7 @@ private struct ShortcutFeatureTile: View {
         .frame(maxWidth: .infinity, minHeight: 106, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.black.opacity(0.075))
+                .fill(SettingsSurfaceStyle.tileFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -1228,21 +1190,14 @@ private struct KeyCap: View {
             .background(
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
                     .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.12),
-                                Color.black.opacity(0.06)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
+                        Color.secondary.opacity(0.11)
                     )
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
                     .stroke(Color.white.opacity(0.16), lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.10), radius: 4, y: 2)
+            .shadow(color: .clear, radius: 0)
     }
 }
 
@@ -1467,7 +1422,7 @@ private struct RuleSummaryTile: View {
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.black.opacity(0.075))
+                .fill(SettingsSurfaceStyle.tileFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -1521,7 +1476,7 @@ private struct RulePanel<Content: View>: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.black.opacity(0.08))
+                .fill(SettingsSurfaceStyle.panelFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -1821,7 +1776,7 @@ private struct StatsMetricTile: View {
         .frame(maxWidth: .infinity, minHeight: 104, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.black.opacity(0.075))
+                .fill(SettingsSurfaceStyle.tileFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -1879,7 +1834,7 @@ private struct StatsTopEmojiPanel: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.black.opacity(0.08))
+                .fill(SettingsSurfaceStyle.panelFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -2105,16 +2060,7 @@ private struct AboutIdentityPanel: View {
         .padding(15)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.08),
-                            Color.black.opacity(0.06)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(SettingsSurfaceStyle.panelFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -2159,7 +2105,7 @@ private struct AboutMetricTile: View {
         .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.black.opacity(0.075))
+                .fill(SettingsSurfaceStyle.tileFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)

@@ -74,12 +74,16 @@ class AppSettings {
     private var current: AppSettingsData
 
     private init() {
-        if let saved = storage.loadSettings() {
+        if var saved = storage.loadSettings() {
+            if saved.triggerCharacter == Constants.legacyDefaultTriggerCharacter {
+                saved.triggerCharacter = Constants.defaultTriggerCharacter
+                storage.saveSettings(saved)
+            }
             current = saved
         } else {
             current = AppSettingsData(
-                triggerCharacter: "`",
-                minTriggerLength: 2,
+                triggerCharacter: Constants.defaultTriggerCharacter,
+                minTriggerLength: Constants.defaultMinTriggerLength,
                 inlineTriggerEnabled: true,
                 emojiBoardShortcut: ShortcutKey(keyCode: 0x0E, modifiers: 0x0300),
                 inlinePanelOpenMode: .recents,
@@ -108,8 +112,8 @@ class AppSettings {
 
     func resetToDefaults() {
         let defaults = AppSettingsData(
-            triggerCharacter: "`",
-            minTriggerLength: 2,
+            triggerCharacter: Constants.defaultTriggerCharacter,
+            minTriggerLength: Constants.defaultMinTriggerLength,
             inlineTriggerEnabled: true,
             emojiBoardShortcut: ShortcutKey(keyCode: 0x0E, modifiers: 0x0300),
             inlinePanelOpenMode: .recents,
